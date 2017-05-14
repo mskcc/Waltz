@@ -49,7 +49,7 @@ import htsjdk.samtools.util.Interval;
  *         class that represents a pileup of reads in a very efficient way
  * 
  */
-public class RegionPileup
+public class RegionPileupOld
 {
 	private IndexedFastaSequenceFile referenceFasta;
 	private byte[] referenceBases;
@@ -66,16 +66,7 @@ public class RegionPileup
 	private byte[] baseQualities;
 	private int readIndex;
 	private boolean duplicate = false;
-	/**
-	 * map of read name to int[] where first int is read start and the second
-	 * int is read end
-	 */
 	private Map<String, int[]> seenReads;
-	private int pileupIndex;
-	/**
-	 * the first valid position in the pileup for the current read
-	 */
-	private int validPileupStart;
 
 	/**
 	 * holds special genotypes: multi-base events and insertions
@@ -83,7 +74,7 @@ public class RegionPileup
 	 */
 	private Map<GenotypeID, Genotype> specialGenotypes;
 
-	public RegionPileup(IndexedFastaSequenceFile referenceFasta, int insertMin,
+	public RegionPileupOld(IndexedFastaSequenceFile referenceFasta, int insertMin,
 			int insertMax)
 	{
 		this.referenceFasta = referenceFasta;
@@ -166,12 +157,10 @@ public class RegionPileup
 
 		// TODO HANDLE NEGATIVE STRAND!!!
 
-		setIndicesToProcessRecord(record);
-
 		// tracks the current position in the read
-		// this has to start at 0 because we are parsing the CIGAR string and
-		// going through it.
 		readIndex = 0;
+		// points to the current position in the pileup
+		int pileupIndex = record.getStart() - interval.getStart();
 		int operatorLength = 0;
 		Cigar cigar = record.getCigar();
 		List<CigarElement> elements = cigar.getCigarElements();
@@ -187,7 +176,7 @@ public class RegionPileup
 				// add the bases
 				for (int j = 0; j < operatorLength; j++)
 				{
-					if (pileupIndex >= validPileupStart
+					if (pileupIndex >= 0
 							&& pileupIndex <= lastValidPositionIndex)
 					{
 						positions[pileupIndex].addBase(readBases[readIndex]);
@@ -207,7 +196,7 @@ public class RegionPileup
 			{
 				// TODO replace this boundary check with proper tracking of
 				// CIGAR and quitting when it goes out of the region
-				if (pileupIndex > validPileupStart
+				if (pileupIndex >= 1
 						&& pileupIndex <= lastValidPositionIndex + 1)
 				{
 					positions[pileupIndex].addInsertion(operatorLength);
@@ -242,7 +231,7 @@ public class RegionPileup
 			{
 				// add deletion to the special genotypes map iff it is a
 				// multi-base deletion
-				if (operatorLength > 1 && pileupIndex > validPileupStart
+				if (operatorLength > 1 && pileupIndex >= 1
 						&& pileupIndex <= lastValidPositionIndex + 1)
 				{
 					// make genotype id
@@ -267,7 +256,7 @@ public class RegionPileup
 				// add deletions to the pileup
 				for (int j = 0; j < operatorLength; j++)
 				{
-					if (pileupIndex >= validPileupStart
+					if (pileupIndex >= 0
 							&& pileupIndex <= lastValidPositionIndex)
 					{
 						positions[pileupIndex].addDeletion(mateUnmapped,
@@ -332,40 +321,6 @@ public class RegionPileup
 				pileupIndex += operatorLength;
 				readIndex += operatorLength;
 			}
-		}
-
-	}
-
-	private void setIndicesToProcessRecord(SAMRecord record)
-	{
-		int adjustedReadStart = record.getAlignmentStart();
-		int[] mateRange = seenReads.get(record.getReadName());
-
-		// if the mate of this read was already processed
-		if (mateRange != null)
-		{
-			// and if the first read overlaps with the current read, adjust the
-			// current read start such that the fragment is only counted once
-			if (mateRange[1] >= adjustedReadStart)
-			{
-				adjustedReadStart = mateRange[1] + 1;
-			}
-		}
-		else
-		{
-			// add the read to seen reads
-			seenReads.put(record.getReadName(), new int[] {
-					record.getAlignmentStart(), record.getAlignmentEnd() });
-		}
-
-		// points to the current position in the pileup
-		pileupIndex = record.getAlignmentStart() - interval.getStart();
-		validPileupStart = adjustedReadStart - interval.getStart();
-		// if the overlap is ending to the left of current pileup window, it
-		// doesn't affect us
-		if (validPileupStart < 0)
-		{
-			validPileupStart = 0;
 		}
 
 	}
