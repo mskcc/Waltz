@@ -2,22 +2,24 @@
  *
  * @author Juber Patel
  *
- * Copyright (c) 2017 Innovation Lab, CMO, MSKCC.
+ *         Copyright (c) 2017 Innovation Lab, CMO, MSKCC.
  *
- * This software was developed at the Innovation Lab, Center for Molecular Oncology, 
- * Memorial Sloan Kettering Cancer Center, New York, New York.
+ *         This software was developed at the Innovation Lab, Center for
+ *         Molecular Oncology,
+ *         Memorial Sloan Kettering Cancer Center, New York, New York.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *         Licensed under the Apache License, Version 2.0 (the "License");
+ *         you may not use this file except in compliance with the License.
+ *         You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *         http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *         Unless required by applicable law or agreed to in writing, software
+ *         distributed under the License is distributed on an "AS IS" BASIS,
+ *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ *         implied.
+ *         See the License for the specific language governing permissions and
+ *         limitations under the License.
  *******************************************************************************/
 /**
  * 
@@ -28,8 +30,6 @@ import java.io.File;
 import java.io.IOException;
 
 import org.mskcc.juber.alignment.filters.AlignmentFilter;
-import org.mskcc.juber.alignment.filters.BasicFilter;
-import org.mskcc.juber.alignment.filters.MapQ20Filter;
 import org.mskcc.juber.waltz.pileup.RegionPileup;
 import org.mskcc.juber.waltz.pileup.processors.GenotypingProcessor;
 import org.mskcc.juber.waltz.pileup.processors.MetricsProcessor;
@@ -62,7 +62,7 @@ public class WaltzWorker
 	private IndexedFastaSequenceFile referenceFasta;
 	private AlignmentFilter filter;
 
-	public WaltzWorker(String module, String filterType, String bamFile,
+	public WaltzWorker(String module, int minimumMappingQuality, String bamFile,
 			String bamIndexFile, File referenceFastaFile,
 			IntervalList intervalList, String moduleArgument, int[] insertSize,
 			WaltzOutput output) throws IOException
@@ -76,27 +76,13 @@ public class WaltzWorker
 		this.insertMax = insertSize[1];
 		this.output = output;
 		this.referenceFasta = new IndexedFastaSequenceFile(referenceFastaFile);
-		setFilter(filterType);
+		setFilter(minimumMappingQuality);
 		setProcessor(module, moduleArgument);
 	}
 
-	private void setFilter(String filterType)
+	private void setFilter(int minimumMappingQuality)
 	{
-		if (filterType.equals("BasicFilter"))
-		{
-			filter = new BasicFilter();
-		}
-		else if (filterType.equals("QualityFilter"))
-		{
-			filter = new MapQ20Filter();
-		}
-		else
-		{
-			System.err.println(
-					"Alignment Filter Type not recognized: " + filterType);
-			System.err.println("Aborting.");
-			System.exit(1);
-		}
+		filter = new AlignmentFilter(minimumMappingQuality);
 	}
 
 	private void setProcessor(String module, String moduleArgument)
@@ -166,8 +152,8 @@ public class WaltzWorker
 					System.err.println(record.getSAMString());
 					System.err.println("Region: " + interval);
 					e.printStackTrace();
+					continue;
 					// System.exit(1);
-
 				}
 			}
 

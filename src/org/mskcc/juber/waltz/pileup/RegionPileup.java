@@ -336,6 +336,12 @@ public class RegionPileup
 
 	}
 
+	private void setIndicesToProcessRecordDummy(SAMRecord record)
+	{
+		validPileupStart = 0;
+		pileupIndex = record.getAlignmentStart() - interval.getStart();
+	}
+
 	private void setIndicesToProcessRecord(SAMRecord record)
 	{
 		int adjustedReadStart = record.getAlignmentStart();

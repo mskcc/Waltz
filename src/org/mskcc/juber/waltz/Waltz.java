@@ -2,22 +2,24 @@
  *
  * @author Juber Patel
  *
- * Copyright (c) 2017 Innovation Lab, CMO, MSKCC.
+ *         Copyright (c) 2017 Innovation Lab, CMO, MSKCC.
  *
- * This software was developed at the Innovation Lab, Center for Molecular Oncology, 
- * Memorial Sloan Kettering Cancer Center, New York, New York.
+ *         This software was developed at the Innovation Lab, Center for
+ *         Molecular Oncology,
+ *         Memorial Sloan Kettering Cancer Center, New York, New York.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *         Licensed under the Apache License, Version 2.0 (the "License");
+ *         you may not use this file except in compliance with the License.
+ *         You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *         http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *         Unless required by applicable law or agreed to in writing, software
+ *         distributed under the License is distributed on an "AS IS" BASIS,
+ *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ *         implied.
+ *         See the License for the specific language governing permissions and
+ *         limitations under the License.
  *******************************************************************************/
 package org.mskcc.juber.waltz;
 
@@ -76,7 +78,7 @@ public class Waltz
 		// suitable for cluster run and it will also resolve some design issues.
 
 		final String module = args[0];
-		final String filterType = args[1];
+		final int minimumMappingQuality = Integer.parseInt(args[1]);
 		final String bamFile = args[2];
 		final File referenceFastaFile = new File(args[3]);
 		final File intervalsBedFile = new File(args[4]);
@@ -111,9 +113,9 @@ public class Waltz
 		long start = System.currentTimeMillis();
 
 		IntervalList intervalList = inputIntervalLists[0];
-		WaltzWorker worker = new WaltzWorker(module, filterType, bamFile,
-				bamIndexFile, referenceFastaFile, intervalList, moduleArgument,
-				dummyInsertSize, output);
+		WaltzWorker worker = new WaltzWorker(module, minimumMappingQuality,
+				bamFile, bamIndexFile, referenceFastaFile, intervalList,
+				moduleArgument, dummyInsertSize, output);
 
 		// execute the worker
 		worker.process();
