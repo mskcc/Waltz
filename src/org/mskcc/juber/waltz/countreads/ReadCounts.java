@@ -7,6 +7,8 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.DecimalFormat;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * @author Juber Patel
@@ -26,6 +28,8 @@ public class ReadCounts
 	protected long uniqueMappedReads;
 	protected long totalTargetReads;
 	protected long uniqueTargetReads;
+
+	private Map<Integer, int[]> fragmentSizeFrequencies = new TreeMap<Integer, int[]>();
 
 	public ReadCounts(String bamFileName, String sampleID, String targetLabel)
 	{
@@ -57,8 +61,47 @@ public class ReadCounts
 		writer.write(uniqueTargetReads + "\t");
 		writer.write(decimalFormat.format(onTargetTotalFraction) + "\t");
 		writer.write(decimalFormat.format(onTargetUniqueFraction) + "\n");
-		
+
 		writer.close();
+
+		// write fragment sizes
+		writer = new BufferedWriter(
+				new FileWriter(bamFileName + ".fragment-sizes"));
+
+		for (Integer fragmentSize : fragmentSizeFrequencies.keySet())
+		{
+			int[] freqs = fragmentSizeFrequencies.get(fragmentSize);
+			writer.write(
+					fragmentSize + "\t" + freqs[0] + "\t" + freqs[1] + "\n");
+		}
+
+		writer.close();
+
+	}
+
+	public void addTotalFragmentSize(int fragmentSize)
+	{
+		int[] freqs = fragmentSizeFrequencies.get(fragmentSize);
+		if (freqs == null)
+		{
+			freqs = new int[2];
+			fragmentSizeFrequencies.put(fragmentSize, freqs);
+		}
+
+		freqs[0]++;
+	}
+
+	public void addUniqueFragmentSize(int fragmentSize)
+	{
+		int[] freqs = fragmentSizeFrequencies.get(fragmentSize);
+		if (freqs == null)
+		{
+			freqs = new int[2];
+			fragmentSizeFrequencies.put(fragmentSize, freqs);
+		}
+
+		freqs[1]++;
+
 	}
 
 }

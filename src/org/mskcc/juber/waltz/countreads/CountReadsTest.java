@@ -29,8 +29,11 @@ public class CountReadsTest
 		//String bam = "/Users/patelj1/workspace/PUMA/5500-AR/FinalBams/DS-puma-0027-PL-C3-IGO-05500-AR-33_bc67_5500-AR_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam";
 		//String bedFile = "bedFiles/ERBB2.bed";
 		
-		String bam = "bamFiles/MCC_P-0014336-T01_IGO_05500_DG_11_S79_L004.bam";
-		String bedFile = "bedFiles/impact410-mcpyv-ebv-hpv.bed";
+		//String bam = "bamFiles/MCC_P-0014336-T01_IGO_05500_DG_11_S79_L004.bam";
+		String bam = "bamFiles/Pool-cfDNA-30ng-1-5uM-IGO-05500-DL-5_bc219_Pool-05500-DL-Tube3-1_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam";
+		
+		//String bedFile = "bedFiles/impact410-mcpyv-ebv-hpv.bed";
+		String bedFile = "bedFiles/Sarath-10-genes.bed";
 
 		CountReads.main(
 				new String[] { bam, coverageThreshold, geneList, bedFile });

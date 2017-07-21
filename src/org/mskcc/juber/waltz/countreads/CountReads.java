@@ -130,6 +130,23 @@ public class CountReads
 				// not a duplicate read, count towards covered regions
 				coveredRegions.recordAlignment(record);
 			}
+
+			// add fragment size
+			// only on-target, first read, non-zero, positive value, capped at a
+			// value
+			int maxInsertSize = 600;
+			int fragmentSize = record.getInferredInsertSize();
+			if (intersecting.isEmpty() || fragmentSize <= 0
+					|| fragmentSize > maxInsertSize)
+			{
+				continue;
+			}
+
+			readCounts.addTotalFragmentSize(fragmentSize);
+			if (!record.getDuplicateReadFlag())
+			{
+				readCounts.addUniqueFragmentSize(fragmentSize);
+			}
 		}
 
 		iterator.close();
