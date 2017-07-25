@@ -35,7 +35,7 @@ import org.mskcc.juber.waltz.Waltz;
  * @author Juber Patel
  *
  */
-public class WaltzMetricsTest
+public class WaltzPileupMetricsTest
 {
 
 	/**
@@ -49,20 +49,14 @@ public class WaltzMetricsTest
 	{
 		// TODO a bit more accuracy needed. We are probably missing some reads.
 
-		String module = "Metrics";
+		String module = "PileupMetrics";
 		// String module = "Genotyping";
 		// String module = "SignatureFinding";
 
 		// String filterType = "BasicFilter";
 		String minimumMappingQuality = "1";
 
-		// String bamFile = "a.bam";
-		String bamFile = "/Users/patelj1/workspace/Shukla/run-5500-AQ/FinalBams/ES-CTDNA-03-01-IGO-05500-AQ-9_bc49_5500-AQ_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam";
-		// String bamFile =
-		// "/Users/patelj1/workspace/Shukla/FinalBams/ES-CTDNA-09-01-IGO-05500-AQ-17_bc79_5500-AQ_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam";
-		// String bamFile =
-		// "/Users/patelj1/workspace/Moynahan/FinalBams/1196-2-IGO-05500-AL-21_bc37_5500-AL_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam";
-		// String bamFile = "test.bam";
+		String bamFile = "bamFiles/Pool-cfDNA-30ng-1-5uM-IGO-05500-DL-5_bc219_Pool-05500-DL-Tube3-1_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam";
 
 		// String referenceFasta =
 		// "/Users/patelj1/resources/hg19-ucsc/human_hg19.fa";
@@ -72,7 +66,7 @@ public class WaltzMetricsTest
 		// String bedFile =
 		// "/Users/patelj1/workspace/CustomCapture/bedFiles/newBedFiles/BRAF-bad.bed";
 		// String intervalsBedFile = "BRAF.bed";
-		String intervalsBedFile = "/Users/patelj1/workspace/Marianas/bedFiles/EWSR1.bed";
+		String intervalsBedFile = "bedFiles/Sarath-10-genes.bed";
 		// String intervalsBedFile =
 		// "/Users/patelj1/workspace/Marianas/bedFiles/STAG2-CDKN2A-TP53-EWSR1-my-targets.bed";
 		// String intervalsBedFile =

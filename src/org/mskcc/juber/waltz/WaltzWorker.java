@@ -32,7 +32,7 @@ import java.io.IOException;
 import org.mskcc.juber.alignment.filters.AlignmentFilter;
 import org.mskcc.juber.waltz.pileup.RegionPileup;
 import org.mskcc.juber.waltz.pileup.processors.GenotypingProcessor;
-import org.mskcc.juber.waltz.pileup.processors.MetricsProcessor;
+import org.mskcc.juber.waltz.pileup.processors.PileupMetricsProcessor;
 import org.mskcc.juber.waltz.pileup.processors.PileupProcessor;
 import org.mskcc.juber.waltz.pileup.processors.SignatureFindingProcessor;
 
@@ -88,9 +88,9 @@ public class WaltzWorker
 	private void setProcessor(String module, String moduleArgument)
 			throws IOException
 	{
-		if (module.equals("Metrics"))
+		if (module.equals("PileupMetrics"))
 		{
-			processor = new MetricsProcessor();
+			processor = new PileupMetricsProcessor();
 			output.enableForMetrics();
 		}
 		else if (module.equals("Genotyping"))

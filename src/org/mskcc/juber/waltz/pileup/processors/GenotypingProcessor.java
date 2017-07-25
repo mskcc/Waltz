@@ -37,7 +37,7 @@ import org.mskcc.juber.waltz.pileup.RegionPileupView;
 public class GenotypingProcessor implements PileupProcessor
 {
 	private RegionPileupView pileup;
-	private MetricsProcessor metricsProcessor;
+	private PileupMetricsProcessor metricsProcessor;
 	private List<GenotypeID> genotypeIDs;
 	private List<String> genotypeNames;
 
@@ -114,7 +114,7 @@ public class GenotypingProcessor implements PileupProcessor
 	public void setRegionPileupView(RegionPileupView view)
 	{
 		this.pileup = view;
-		metricsProcessor = new MetricsProcessor();
+		metricsProcessor = new PileupMetricsProcessor();
 		metricsProcessor.setRegionPileupView(pileup);
 	}
 

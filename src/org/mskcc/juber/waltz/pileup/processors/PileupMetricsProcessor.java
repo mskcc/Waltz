@@ -34,7 +34,7 @@ import org.mskcc.juber.waltz.pileup.RegionPileupView;
  * @author Juber Patel
  *
  */
-public class MetricsProcessor implements PileupProcessor
+public class PileupMetricsProcessor implements PileupProcessor
 {
 	private RegionPileupView pileup;
 
