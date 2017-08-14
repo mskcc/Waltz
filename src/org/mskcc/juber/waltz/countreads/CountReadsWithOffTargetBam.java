@@ -12,6 +12,8 @@ import org.mskcc.juber.util.CustomCaptureException;
 import org.mskcc.juber.util.Util;
 
 import htsjdk.samtools.SAMFileHeader;
+import htsjdk.samtools.SAMFileWriter;
+import htsjdk.samtools.SAMFileWriterFactory;
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.SAMRecordIterator;
 import htsjdk.samtools.SamReader;
@@ -22,7 +24,7 @@ import htsjdk.samtools.util.Interval;
  * @author Juber Patel
  *
  */
-public class CountReads
+public class CountReadsWithOffTargetBam
 {
 	/**
 	 * @param args
@@ -88,6 +90,9 @@ public class CountReads
 		SAMRecordIterator iterator = reader.iterator();
 		// SAMRecordIterator iterator = reader.query("11", 60000, 76000, false);
 
+		//SAMFileWriter w = new SAMFileWriterFactory()
+			//.makeBAMWriter(reader.getFileHeader(), false, new File("t.bam"));
+
 		while (iterator.hasNext())
 		{
 			SAMRecord record = iterator.next();
@@ -111,6 +116,10 @@ public class CountReads
 			if (!intersecting.isEmpty())
 			{
 				readCounts.totalTargetReads++;
+			}
+			else
+			{
+				//w.addAlignment(record);
 			}
 
 			if (record.getDuplicateReadFlag())
@@ -151,18 +160,20 @@ public class CountReads
 
 		iterator.close();
 		reader.close();
+		//w.close();
 	}
 
 	private static IntervalNameMap toIntervalNameMap(List<Interval> intervals)
 	{
 		// build the interval name map
 		IntervalNameMap intervalNameMap = new IntervalNameMap();
-		
+
 		for (Interval interval : intervals)
 		{
 			// shorten the interval so that we only count on target read when
 			// there is minReadOverlap
-			int minReadOverlap = 10;
+			//int minReadOverlap = 10;
+			int minReadOverlap = 0;
 			int start = interval.getStart() + minReadOverlap;
 			int end = interval.getEnd() - minReadOverlap;
 			// interval is too short for further shortening
