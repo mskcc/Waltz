@@ -33,12 +33,13 @@ public class CountReadsTest
 		// String bam = "bamFiles/Pool-cfDNA-30ng-1-5uM-IGO-05500-DL-5_bc219_Pool-05500-DL-Tube3-1_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam";
 		//String bam = "bamFiles/Pan-Cancer-F1_S14_L001.bam";
 		//String bam = "t.bam";
-		String bam = "bamFiles/DS-puma-0006-PL-C17-IGO-05500-BO-7_bc107_5500-BO_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam";
-		
+		//String bam = "bamFiles/DS-puma-0006-PL-C17-IGO-05500-BO-7_bc107_5500-BO_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam";
+		String bam = "bamFiles/filtered_duplexConsensusReads_collapsed-sample_with_UMI_sorted_mateFixed_paired.bam";
+
 		// String bedFile = "bedFiles/impact410-mcpyv-ebv-hpv.bed";
 		// String bedFile = "bedFiles/Sarath-10-genes.bed";
-		//String bedFile = "bedFiles/pan-cancer-panel.bed";
-		String bedFile = "bedFiles/ERBB2-PUMA.bed";
+		String bedFile = "bedFiles/pan-cancer-panel.bed";
+		//String bedFile = "bedFiles/ERBB2-PUMA.bed";
 
 		CountReads.main(
 				new String[] { bam, coverageThreshold, geneList, bedFile });

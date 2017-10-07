@@ -64,11 +64,19 @@ public class CoveredRegions
 		// very first record
 		if (contig == null)
 		{
+			// not a single record was processed and we received end signal;
+			// return
+			if (record == null)
+			{
+				return;
+			}
+
 			contig = record.getContig();
 			start = record.getStart();
 			end = record.getEnd();
 			reads = 1;
 		}
+
 		// there is a gap between current and previous record
 		// so record previous region, start a new region
 		else if (record == null || !record.getContig().equals(contig)
