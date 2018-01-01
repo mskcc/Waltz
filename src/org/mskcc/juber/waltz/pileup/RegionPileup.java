@@ -269,9 +269,8 @@ public class RegionPileup
 			}
 			else if (operator.equals(CigarOperator.DELETION))
 			{
-				// add deletion to the special genotypes map iff it is a
-				// multi-base deletion
-				if (operatorLength > 1 && pileupIndex > validPileupStart
+				// add deletion to the genotypes
+				if (pileupIndex > validPileupStart
 						&& pileupIndex <= lastValidPositionIndex)
 				{
 					// make genotype id
