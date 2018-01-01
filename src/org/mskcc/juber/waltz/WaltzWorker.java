@@ -142,97 +142,31 @@ public class WaltzWorker
 
 				validReads++;
 
-				try
-				{
+				//try
+				//{
 					pileup.addRecord(record);
-				}
-				catch (Exception e)
-				{
-					System.err.println("Problem processing record:");
-					System.err.println(record.getSAMString());
-					System.err.println("Region: " + interval);
-					e.printStackTrace();
-					continue;
-					// System.exit(1);
-				}
+				//}
+				//catch (Exception e)
+				//{
+				//	System.err.println("Problem processing record:");
+				//	System.err.println(record.getSAMString());
+				//	System.err.println("Region: " + interval);
+				//	e.printStackTrace();
+				//	continue;
+				//}
 			}
 
 			iterator.close();
 
 			pileup.giveViewTo(processor);
+			
+			//if(interval.getName().equals("exon_PTEN_5.1_2_A"))
+			//{
+			//	int a = 5;
+			//}
+			
 			processor.processRegion(output);
 		}
-
-		// SamLocusIterator locusIterator = new SamLocusIterator(reader,
-		// intervalList, true);
-		//
-		// // for each locus
-		// while (locusIterator.hasNext())
-		// {
-		// SAMRecord record = null;
-		// LocusInfo locusInfo = locusIterator.next();
-		//
-		// int positiveTotal = 0;
-		// int negativeTotal = 0;
-		// int[] positiveStrandBaseCounts = new int[4];
-		// int[] negativeStrandBaseCounts = new int[4];
-		// HashSet<String> seen = new HashSet<String>();
-		//
-		// // for each read covering the locus
-		// for (RecordAndOffset read : locusInfo.getRecordAndPositions())
-		// {
-		// // ignore Ns
-		// if (read.getReadBase() == 'N')
-		// continue;
-		//
-		// // ignore bases below the quality threshold
-		// if (read.getBaseQuality() < minBaseQuality)
-		// continue;
-		//
-		// // choose the right strandwise accumulator
-		// int[] rightArray = null;
-		// record = read.getRecord();
-		//
-		// // count a read pair only once
-		// if (seen.contains(record.getReadName()))
-		// {
-		// continue;
-		// }
-		//
-		// seen.add(record.getReadName());
-		//
-		// if (record.getReadNegativeStrandFlag())
-		// {
-		// rightArray = negativeStrandBaseCounts;
-		// negativeTotal++;
-		// }
-		// else
-		// {
-		// rightArray = positiveStrandBaseCounts;
-		// positiveTotal++;
-		// }
-		//
-		// rightArray[Utils.baseToInt(read.getReadBase()) - 1]++;
-		//
-		// }
-		//
-		// // no reads for current locus
-		// if (record == null)
-		// {
-		// continue;
-		// }
-
-		// // add the pileup to the map
-		// // Locus locus = new Locus(Utils.getChrNumber(record
-		// // .getReferenceName()), locusInfo.getPosition());
-		// // Pileup pileup = new Pileup(locusInfo.getSequenceName(),
-		// // locusInfo.getPosition(), positiveStrandBaseCounts,
-		// // negativeStrandBaseCounts, positiveTotal, negativeTotal);
-		// // pileups.put(locus, pileup);
-		// }
-		//
-		// locusIterator.close();
-		// reader.close();
 
 		long time = System.currentTimeMillis() - start;
 

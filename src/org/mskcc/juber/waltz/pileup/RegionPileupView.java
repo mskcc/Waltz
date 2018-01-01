@@ -2,31 +2,34 @@
  *
  * @author Juber Patel
  *
- * Copyright (c) 2017 Innovation Lab, CMO, MSKCC.
+ *         Copyright (c) 2017 Innovation Lab, CMO, MSKCC.
  *
- * This software was developed at the Innovation Lab, Center for Molecular Oncology, 
- * Memorial Sloan Kettering Cancer Center, New York, New York.
+ *         This software was developed at the Innovation Lab, Center for
+ *         Molecular Oncology,
+ *         Memorial Sloan Kettering Cancer Center, New York, New York.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *         Licensed under the Apache License, Version 2.0 (the "License");
+ *         you may not use this file except in compliance with the License.
+ *         You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *         http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *         Unless required by applicable law or agreed to in writing, software
+ *         distributed under the License is distributed on an "AS IS" BASIS,
+ *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ *         implied.
+ *         See the License for the specific language governing permissions and
+ *         limitations under the License.
  *******************************************************************************/
 /**
  * 
  */
 package org.mskcc.juber.waltz.pileup;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-import org.mskcc.juber.genotype.Genotype;
 import org.mskcc.juber.genotype.GenotypeID;
 
 import htsjdk.samtools.util.Interval;
@@ -47,13 +50,16 @@ public class RegionPileupView
 	 * holds special genotypes: multi-base events and insertions
 	 * multi-base substitution not handled yet.
 	 */
-	public final Map<GenotypeID, Genotype> specialGenotypes;
+	public final Map<GenotypeID, Set<String>> genotypes;
+	public final Map<String, FragmentSpan> fragmentSpans;
 	public final int insertMin;
 	public final int insertMax;
-	
+
 	public RegionPileupView(byte[] referenceBases, Interval interval,
 			int lastValidPositionIndex, PositionPileup[] positions,
-			PositionPileup[] positionsWithoutDuplicates, Map<GenotypeID, Genotype> specialGenotypes, int insertMin,
+			PositionPileup[] positionsWithoutDuplicates,
+			Map<GenotypeID, Set<String>> genotypes,
+			Map<String, FragmentSpan> fragmentSpans, int insertMin,
 			int insertMax)
 	{
 		this.referenceBases = referenceBases;
@@ -61,7 +67,8 @@ public class RegionPileupView
 		this.lastValidPositionIndex = lastValidPositionIndex;
 		this.positions = positions;
 		this.positionsWithoutDuplicates = positionsWithoutDuplicates;
-		this.specialGenotypes = specialGenotypes;
+		this.genotypes = genotypes;
+		this.fragmentSpans = fragmentSpans;
 		this.insertMin = insertMin;
 		this.insertMax = insertMax;
 	}
@@ -89,6 +96,18 @@ public class RegionPileupView
 		{
 			return -1;
 		}
+	}
+
+	public boolean contains(GenotypeID genotypeID)
+	{
+		int pileupIndex = getIndex(genotypeID.contig, genotypeID.position);
+
+		if (pileupIndex == -1)
+		{
+			return false;
+		}
+
+		return true;
 	}
 
 }

@@ -28,14 +28,12 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import org.mskcc.juber.genotype.Genotype;
@@ -48,14 +46,13 @@ import org.mskcc.juber.waltz.pileup.RegionPileupView;
 
 import com.google.common.collect.Sets;
 
-public class GenotypingProcessor implements PileupProcessor
+public class GenotypingProcessorOld implements PileupProcessor
 {
 	private RegionPileupView pileup;
 	private PileupMetricsProcessor metricsProcessor;
 	private List<GenotypeIDWithName> genotypeIDsWithName;
-	private Comparator<Entry<GenotypeIDWithName, Set<String>>> fragmentCountComparator;
 
-	public GenotypingProcessor(File lociFile) throws IOException
+	public GenotypingProcessorOld(File lociFile) throws IOException
 	{
 		genotypeIDsWithName = new ArrayList<GenotypeIDWithName>();
 
@@ -72,18 +69,6 @@ public class GenotypingProcessor implements PileupProcessor
 		}
 
 		reader.close();
-
-		// create fragment count comparator
-		fragmentCountComparator = new Comparator<Entry<GenotypeIDWithName, Set<String>>>()
-		{
-
-			@Override
-			public int compare(Entry<GenotypeIDWithName, Set<String>> arg0,
-					Entry<GenotypeIDWithName, Set<String>> arg1)
-			{
-				return arg1.getValue().size() - arg0.getValue().size();
-			}
-		};
 	}
 
 	/**
@@ -153,10 +138,55 @@ public class GenotypingProcessor implements PileupProcessor
 	public void processRegion(WaltzOutput output) throws IOException
 	{
 		metricsProcessor.processRegion(output);
-		processGenotypes(output);
+		processGenotypesOld(output);
 
 		// free the memory once we are done
 		this.pileup = null;
+	}
+
+	private void processGenotypesOld(WaltzOutput output) throws IOException
+	{
+		// process the genotypes list one by one
+		for (int i = 0; i < genotypeIDs.size(); i++)
+		{
+			GenotypeID genotypeID = genotypeIDs.get(i);
+			if (genotypeID == null)
+			{
+				continue;
+			}
+
+			String genotypeName = genotypeNames.get(i);
+
+			// this genotype is not in this region
+			if (!pileup.contains(genotypeID))
+			{
+				continue;
+			}
+
+			String outString = null;
+			if (genotypeID.type == GenotypeEventType.SNV)
+			{
+				// process SNV
+				outString = processSNV(genotypeID, genotypeName);
+			}
+			else if (genotypeID.type == GenotypeEventType.MNV)
+			{
+				// process SNV
+				outString = processMNV(genotypeID, genotypeName);
+			}
+			else if (genotypeID.type == GenotypeEventType.DELETION
+					&& genotypeID.ref.length == 2)
+			{
+				outString = processSinglebaseDeletion(genotypeID, genotypeName);
+			}
+			else
+			{
+				// process genotype
+				outString = processGenotype(genotypeID, genotypeName);
+			}
+
+			output.toGenotypesWriter(outString + "\n");
+		}
 	}
 
 	private void processGenotypes(WaltzOutput output) throws IOException
@@ -178,36 +208,14 @@ public class GenotypingProcessor implements PileupProcessor
 			}
 		}
 
-		// no genotypes to be profiled in the current region
-		if (regionGenotypes.isEmpty())
-		{
-			return;
-		}
-
 		String outString = null;
 		outString = processGenotypeSet(regionGenotypes);
 		output.toGenotypesWriter(outString + "\n");
 	}
 
-	/**
-	 * profile the given genotype set that has all the genotypes for the current
-	 * region. Since the powerset of this set can explode quickly, for the time
-	 * being we will include in the output:
-	 * 
-	 * 1. all individual genotypes
-	 * 2. all combinations (power set) of genotypes with non-zero supporting
-	 * fragments
-	 * 
-	 * If non-zero genotypes are > 5, then top 5 by number of supporting
-	 * fragments are chosen to take the power set
-	 * 
-	 * 
-	 * @param regionGenotypes
-	 * @return
-	 */
 	private String processGenotypeSet(Set<GenotypeIDWithName> regionGenotypes)
 	{
-		StringBuilder result = null;
+		StringBuilder string = null;
 
 		Map<Set<GenotypeIDWithName>, Set<String>> powerSetFragments = getSupportingFragmentsForPowerSet(
 				regionGenotypes);
@@ -237,7 +245,6 @@ public class GenotypingProcessor implements PileupProcessor
 					}
 					else
 					{
-						name.append("-");
 						name.append(genotypeIDWithName.name);
 					}
 				}
@@ -261,6 +268,12 @@ public class GenotypingProcessor implements PileupProcessor
 				}
 			}
 
+			// ignore genotype sets that have 0 spanning fragments
+			if (genotype.totalCoverage == 0)
+			{
+				continue;
+			}
+
 			Set<String> fragments = powerSetFragments.get(s);
 
 			// record supporting fragments
@@ -277,207 +290,19 @@ public class GenotypingProcessor implements PileupProcessor
 			}
 
 			// record genotype
-			if (result == null)
+			if (string == null)
 			{
-				result = new StringBuilder(genotype.toString());
+				string = new StringBuilder(genotype.toString());
 			}
 			else
 			{
-				result.append(System.lineSeparator());
-				result.append(genotype.toString());
+				string.append(System.lineSeparator());
+				string.append(genotype.toString());
 			}
 		}
 
-		return result.toString();
+		return string.toString();
 
-	}
-
-	/**
-	 * Iterate over the powerset of the given set of genotypes and find the
-	 * fragments supporting each non-empty element of the powerset
-	 * 
-	 * @param sNVs
-	 * @return
-	 */
-	private Map<Set<GenotypeIDWithName>, Set<String>> getSupportingFragmentsForPowerSet(
-			Set<GenotypeIDWithName> genotypeIDsWithName)
-	{
-		// find supporting fragments for individual genotypes
-		Map<GenotypeIDWithName, Set<String>> supportingFragments = new HashMap<GenotypeIDWithName, Set<String>>();
-		Set<GenotypeIDWithName> nonZeroGenotypes = new HashSet<GenotypeIDWithName>();
-		for (GenotypeIDWithName genotypeIDWithName : genotypeIDsWithName)
-		{
-			Set<String> fragments = null;
-			// MNV needs a bit of special treatment since only constituent SNVs
-			// are stored in the pileup
-			if (genotypeIDWithName.genotypeID.type == GenotypeEventType.MNV)
-			{
-				fragments = getMNVSupportingFragments(
-						genotypeIDWithName.genotypeID);
-			}
-			else
-			{
-				fragments = pileup.genotypes.get(genotypeIDWithName.genotypeID);
-			}
-
-			if (fragments == null)
-			{
-				fragments = new HashSet<String>();
-			}
-			else
-			{
-				nonZeroGenotypes.add(genotypeIDWithName);
-			}
-
-			supportingFragments.put(genotypeIDWithName, fragments);
-		}
-
-		// compute powerset only for the genotypes with non-zero support
-		Set<Set<GenotypeIDWithName>> powerSet = null;
-		if (nonZeroGenotypes.size() <= 5)
-		{
-			// choose all non-zero genotypes
-			powerSet = Sets.powerSet(nonZeroGenotypes);
-		}
-		else
-		{
-			// choose top 5 non-zero genotypes by number of supporting fragments
-			Set<Entry<GenotypeIDWithName, Set<String>>> entries = supportingFragments
-					.entrySet();
-			List<Entry<GenotypeIDWithName, Set<String>>> list = new ArrayList<Entry<GenotypeIDWithName, Set<String>>>(
-					entries);
-			Collections.sort(list, fragmentCountComparator);
-
-			Set<GenotypeIDWithName> chosenGenotypeIDs = new HashSet<GenotypeIDWithName>();
-			for (int i = 0; i < 5; i++)
-			{
-				if (list.get(i).getValue().size() == 0)
-				{
-					break;
-				}
-
-				chosenGenotypeIDs.add(list.get(i).getKey());
-			}
-
-			powerSet = Sets.powerSet(chosenGenotypeIDs);
-		}
-
-		Set<Set<GenotypeIDWithName>> processingSet = new HashSet<Set<GenotypeIDWithName>>(
-				powerSet);
-		// add individual genotypes to the processing set
-		for (GenotypeIDWithName genotypeIDWithName : genotypeIDsWithName)
-		{
-			Set<GenotypeIDWithName> s = new HashSet<GenotypeIDWithName>();
-			s.add(genotypeIDWithName);
-			processingSet.add(s);
-		}
-
-		powerSet = null;
-
-		// populate the returning set
-		Map<Set<GenotypeIDWithName>, Set<String>> returningSet = new HashMap<Set<GenotypeIDWithName>, Set<String>>();
-		for (Set<GenotypeIDWithName> s : processingSet)
-		{
-			if (s.isEmpty())
-			{
-				continue;
-			}
-
-			Set<String> fragments = getIntersection(s, supportingFragments);
-			returningSet.put(s, fragments);
-
-		}
-
-		return returningSet;
-	}
-
-	/**
-	 * find the fragments that have all the genotypes in genotypeIDs, using
-	 * fragment sets supporting individual genotypeIDs
-	 * 
-	 * @param genotypeIDs
-	 * @param supportingFragments
-	 * @return
-	 */
-	private Set<String> getIntersection(Set<GenotypeIDWithName> genotypeIDs,
-			Map<GenotypeIDWithName, Set<String>> supportingFragments)
-	{
-		Set<String> intersecting = null;
-		for (GenotypeIDWithName genotypeIDWithName : genotypeIDs)
-		{
-			Set<String> supporting = supportingFragments
-					.get(genotypeIDWithName);
-
-			// if any member genotype has 0 supporting fragments, return empty
-			// set
-			if (supporting.isEmpty())
-			{
-				return new HashSet<String>();
-			}
-
-			// first member
-			// make sure to copy the set to avoid obscure bugs
-			if (intersecting == null)
-			{
-				intersecting = new HashSet<String>(supporting);
-			}
-			else
-			{
-				intersecting.retainAll(supporting);
-			}
-		}
-
-		return intersecting;
-	}
-
-	private Set<String> getMNVSupportingFragments(GenotypeID genotypeID)
-	{
-		List<GenotypeID> SNVs = MNVToSNVs(genotypeID);
-		Set<String> intersecting = null;
-		for (GenotypeID SNV : SNVs)
-		{
-			Set<String> fragments = pileup.genotypes.get(SNV);
-
-			// if one of the constituent SNVs has zero support, then the MNV has
-			// zero support
-			if (fragments == null)
-			{
-				return null;
-			}
-
-			// first member
-			// make sure to copy the set to avoid obscure bugs
-			if (intersecting == null)
-			{
-				intersecting = new HashSet<String>(fragments);
-			}
-			else
-			{
-				intersecting.retainAll(fragments);
-			}
-		}
-
-		return intersecting;
-	}
-
-	/**
-	 * break an MNV into constituent SNVs
-	 * 
-	 * @param genotypeID
-	 * @return
-	 */
-	private List<GenotypeID> MNVToSNVs(GenotypeID MNVID)
-	{
-		List<GenotypeID> SNVs = new ArrayList<GenotypeID>();
-		for (int i = 0; i < MNVID.ref.length; i++)
-		{
-			GenotypeID SNV = new GenotypeID(GenotypeEventType.SNV, MNVID.contig,
-					MNVID.position + i, new byte[] { MNVID.ref[i] },
-					new byte[] { MNVID.alt[i] });
-			SNVs.add(SNV);
-		}
-
-		return SNVs;
 	}
 
 	/**
@@ -502,7 +327,6 @@ public class GenotypingProcessor implements PileupProcessor
 				contig = genotypeID.contig;
 				start = genotypeID.position;
 				end = genotypeID.endPosition;
-				continue;
 			}
 
 			// contig check
@@ -645,6 +469,144 @@ public class GenotypingProcessor implements PileupProcessor
 		 */
 
 		return genotype.toString();
+	}
+
+	private String processMNV(GenotypeID genotypeID, String genotypeName)
+	{
+		Genotype genotype = new Genotype(genotypeName, genotypeID);
+
+		List<GenotypeID> SNVs = MNVToSNVs(genotypeID);
+		Map<Set<GenotypeID>, Set<String>> powerSetFragments = getSupportingFragmentsForPowerSet(
+				new HashSet<GenotypeID>(SNVs));
+		Set<String> fragments = null;
+		// find the full MNV set
+		for (Set<GenotypeID> s : powerSetFragments.keySet())
+		{
+			if (s.size() == genotypeID.ref.length)
+			{
+				fragments = powerSetFragments.get(s);
+			}
+		}
+
+		// record supporting fragments
+		if (fragments != null)
+		{
+			genotype.totalSupportingCoverage = fragments.size();
+			for (String fragment : fragments)
+			{
+				if (!pileup.fragmentSpans.get(fragment).isDuplicate())
+				{
+					genotype.uniqueSupportingCoverage++;
+				}
+			}
+		}
+
+		// record spanning fragments
+		for (FragmentSpan fragmentSpan : pileup.fragmentSpans.values())
+		{
+			if (fragmentSpan.spans(genotypeID.contig, genotypeID.position,
+					genotypeID.endPosition))
+			{
+				genotype.totalCoverage++;
+
+				if (!fragmentSpan.isDuplicate())
+				{
+					genotype.uniqueCoverage++;
+				}
+			}
+		}
+
+		return genotype.toString();
+
+	}
+
+	/**
+	 * Iterate over the powerset of the given set of genotypes and find the
+	 * fragments supporting each non-empty element of the powerset
+	 * 
+	 * @param sNVs
+	 * @return
+	 */
+	private Map<Set<GenotypeIDWithName>, Set<String>> getSupportingFragmentsForPowerSet(
+			Set<GenotypeIDWithName> genotypeIDsWithName)
+	{
+		// find supporting fragments for individual genotypes
+		Map<GenotypeIDWithName, Set<String>> supportingFragments = new HashMap<GenotypeIDWithName, Set<String>>();
+		for (GenotypeIDWithName genotypeIDWithName : genotypeIDsWithName)
+		{
+			Set<String> fragments = pileup.genotypes
+					.get(genotypeIDWithName.genotypeID);
+			supportingFragments.put(genotypeIDWithName, fragments);
+		}
+
+		// compute powerset
+		Set<Set<GenotypeIDWithName>> powerSet = Sets
+				.powerSet(genotypeIDsWithName);
+
+		// populate the returning set
+		Map<Set<GenotypeIDWithName>, Set<String>> returningSet = new HashMap<Set<GenotypeIDWithName>, Set<String>>();
+		for (Set<GenotypeIDWithName> s : powerSet)
+		{
+			if (s.isEmpty())
+			{
+				continue;
+			}
+
+			Set<String> fragments = getIntersection(s, supportingFragments);
+			returningSet.put(s, fragments);
+		}
+
+		return returningSet;
+	}
+
+	/**
+	 * find the fragments that have all the genotypes in genotypeIDs, using
+	 * fragment sets supporting individual genotypeIDs
+	 * 
+	 * @param genotypeIDs
+	 * @param supportingFragments
+	 * @return
+	 */
+	private Set<String> getIntersection(Set<GenotypeIDWithName> genotypeIDs,
+			Map<GenotypeIDWithName, Set<String>> supportingFragments)
+	{
+		Set<String> intersecting = null;
+		for (GenotypeIDWithName genotypeIDWithName : genotypeIDs)
+		{
+			Set<String> supporting = supportingFragments
+					.get(genotypeIDWithName);
+
+			if (intersecting == null)
+			{
+				intersecting = supporting;
+			}
+			else
+			{
+				intersecting.retainAll(supporting);
+			}
+		}
+
+		return intersecting;
+	}
+
+	/**
+	 * break an MNV into constituent SNVs
+	 * 
+	 * @param genotypeID
+	 * @return
+	 */
+	private List<GenotypeID> MNVToSNVs(GenotypeID MNVID)
+	{
+		List<GenotypeID> SNVs = new ArrayList<GenotypeID>();
+		for (int i = 0; i < MNVID.ref.length; i++)
+		{
+			GenotypeID SNV = new GenotypeID(GenotypeEventType.SNV, MNVID.contig,
+					MNVID.position + i, new byte[] { MNVID.ref[i] },
+					new byte[] { MNVID.alt[i] });
+			SNVs.add(SNV);
+		}
+
+		return SNVs;
 	}
 
 	private String processMultibaseDeletion(GenotypeID genotypeID,
