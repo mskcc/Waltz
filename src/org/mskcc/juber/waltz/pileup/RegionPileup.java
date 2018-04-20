@@ -392,11 +392,11 @@ public class RegionPileup
 
 		// current record is fully contained in previous records
 		// make sure this record is not processed
-		if (recordSpan == null)
-		{
-			validPileupStart = lastValidPositionIndex + 1;
-			return;
-		}
+		//if (recordSpan == null)
+		//{
+		//	validPileupStart = lastValidPositionIndex + 1;
+		//	return;
+		//}
 
 		// points to the current position in the pileup
 		pileupIndex = record.getAlignmentStart() - interval.getStart();
