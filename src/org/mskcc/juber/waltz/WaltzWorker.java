@@ -142,29 +142,29 @@ public class WaltzWorker
 
 				validReads++;
 
-				//try
-				//{
+				try
+				{
 					pileup.addRecord(record);
-				//}
-				//catch (Exception e)
-				//{
-				//	System.err.println("Problem processing record:");
-				//	System.err.println(record.getSAMString());
-				//	System.err.println("Region: " + interval);
-				//	e.printStackTrace();
-				//	continue;
-				//}
+				}
+				catch (Exception e)
+				{
+					System.err.println("Problem processing record:");
+					System.err.println(record.getSAMString());
+					System.err.println("Region: " + interval);
+					e.printStackTrace();
+					continue;
+				}
 			}
 
 			iterator.close();
 
 			pileup.giveViewTo(processor);
-			
-			//if(interval.getName().equals("exon_PTEN_5.1_2_A"))
-			//{
-			//	int a = 5;
-			//}
-			
+
+			// if(interval.getName().equals("exon_PTEN_5.1_2_A"))
+			// {
+			// int a = 5;
+			// }
+
 			processor.processRegion(output);
 		}
 

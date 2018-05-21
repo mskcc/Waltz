@@ -57,22 +57,15 @@ public class WaltzPileupMetricsTest
 		String minimumMappingQuality = "1";
 
 		String bamFile = "bamFiles/"
-				+ "Pool-cfDNA-30ng-1-5uM-IGO-05500-DL-5_bc219_Pool-05500-DL-Tube3-1_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam";
+				+ "MSK-L-009-cf-IGO-05500-DY-23_bc214_5500-DY-4_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam";
 
 		// String referenceFasta =
 		// "/Users/patelj1/resources/hg19-ucsc/human_hg19.fa";
 		String referenceFasta = "/Users/patelj1/resources/hg19-ncbi/Homo_sapiens_assembly19.fasta";
 
-		// TODO re-check if this is the right file!!
-		// String bedFile =
-		// "/Users/patelj1/workspace/CustomCapture/bedFiles/newBedFiles/BRAF-bad.bed";
-		// String intervalsBedFile = "BRAF.bed";
-		String intervalsBedFile = "bedFiles/Sarath-10-genes.bed";
-		// String intervalsBedFile =
-		// "/Users/patelj1/workspace/Marianas/bedFiles/STAG2-CDKN2A-TP53-EWSR1-my-targets.bed";
-		// String intervalsBedFile =
-		// "/Users/patelj1/workspace/Marianas/bedFiles/ESR1-TP53-PIK3CA-PTEN-ERBB2-AKT1-CDH1-GATA3-my-targets.bed";
-
+		String intervalsBedFile = "bedFiles/pan-cancer-panel.bed";
+		// String intervalsBedFile = "bedFiles/Sarath-10-genes.bed";
+		
 		String moduleArgument = null;
 
 		Waltz.main(new String[] { module, minimumMappingQuality, bamFile,
