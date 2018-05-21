@@ -93,59 +93,69 @@ public class CountReads
 			SAMRecord record = iterator.next();
 			readCounts.totalReads++;
 
-			if (record.getReadUnmappedFlag())
-			// not applying quality filter for the time being
-			// || record.getMappingQuality() < Constants.minMappingQuality)
+			try
 			{
-				readCounts.unmappedReads++;
-				continue;
-			}
+				if (record.getReadUnmappedFlag())
+				// not applying quality filter for the time being
+				// || record.getMappingQuality() < Constants.minMappingQuality)
+				{
+					readCounts.unmappedReads++;
+					continue;
+				}
 
-			readCounts.totalMappedReads++;
+				readCounts.totalMappedReads++;
 
-			// check if on target
-			List<String> intersecting = intervalNameMap.getIntersecting(
-					record.getContig(), record.getAlignmentStart(),
-					record.getAlignmentEnd());
-
-			if (!intersecting.isEmpty())
-			{
-				readCounts.totalTargetReads++;
-			}
-
-			if (record.getDuplicateReadFlag())
-			{
-				readCounts.duplicateMappedReads++;
-
-			}
-			else
-			{
-				readCounts.uniqueMappedReads++;
+				// check if on target
+				List<String> intersecting = intervalNameMap.getIntersecting(
+						record.getContig(), record.getAlignmentStart(),
+						record.getAlignmentEnd());
 
 				if (!intersecting.isEmpty())
 				{
-					readCounts.uniqueTargetReads++;
+					readCounts.totalTargetReads++;
 				}
 
-				// not a duplicate read, count towards covered regions
-				coveredRegions.recordAlignment(record);
-			}
+				if (record.getDuplicateReadFlag())
+				{
+					readCounts.duplicateMappedReads++;
 
-			// add fragment size
-			// only on-target, first read, non-zero, positive value, capped at a
-			// value
-			int maxInsertSize = 600;
-			int fragmentSize = record.getInferredInsertSize();
-			if (intersecting.isEmpty() || fragmentSize <= 0
-					|| fragmentSize > maxInsertSize)
+				}
+				else
+				{
+					readCounts.uniqueMappedReads++;
+
+					if (!intersecting.isEmpty())
+					{
+						readCounts.uniqueTargetReads++;
+					}
+
+					// not a duplicate read, count towards covered regions
+					coveredRegions.recordAlignment(record);
+				}
+
+				// add fragment size
+				// only on-target, first read, non-zero, positive value, capped
+				// at a value
+				int maxInsertSize = 600;
+				int fragmentSize = record.getInferredInsertSize();
+				if (intersecting.isEmpty() || fragmentSize <= 0
+						|| fragmentSize > maxInsertSize)
+				{
+					continue;
+				}
+
+				readCounts.addTotalFragmentSize(fragmentSize);
+				if (!record.getDuplicateReadFlag())
+				{
+					readCounts.addUniqueFragmentSize(fragmentSize);
+				}
+			}
+			catch (Exception e)
 			{
+				System.err.println("Problem processing record:");
+				System.err.println(record.getSAMString());
+				e.printStackTrace();
 				continue;
-			}
-
-			readCounts.addTotalFragmentSize(fragmentSize);
-			if (!record.getDuplicateReadFlag())
-			{
-				readCounts.addUniqueFragmentSize(fragmentSize);
 			}
 		}
 
@@ -157,7 +167,7 @@ public class CountReads
 	{
 		// build the interval name map
 		IntervalNameMap intervalNameMap = new IntervalNameMap();
-		
+
 		for (Interval interval : intervals)
 		{
 			// shorten the interval so that we only count on target read when
