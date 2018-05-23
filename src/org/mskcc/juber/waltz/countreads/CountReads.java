@@ -91,10 +91,11 @@ public class CountReads
 		while (iterator.hasNext())
 		{
 			SAMRecord record = iterator.next();
-			readCounts.totalReads++;
-
+			
 			try
 			{
+				readCounts.totalReads++;
+				
 				if (record.getReadUnmappedFlag())
 				// not applying quality filter for the time being
 				// || record.getMappingQuality() < Constants.minMappingQuality)
