@@ -85,15 +85,14 @@ public class RegionPileup
 	 */
 	private Map<GenotypeID, Set<String>> genotypes;
 
-	public RegionPileup(IndexedFastaSequenceFile referenceFasta, int insertMin,
-			int insertMax)
+	public RegionPileup(IndexedFastaSequenceFile referenceFasta,
+			int maxIntervalLength, int insertMin, int insertMax)
 	{
 		this.referenceFasta = referenceFasta;
 		this.insertMin = insertMin;
 		this.insertMax = insertMax;
-		this.positions = new PositionPileup[Waltz.getMaxRegionLength()];
-		this.positionsWithoutDuplicates = new PositionPileup[Waltz
-				.getMaxRegionLength()];
+		this.positions = new PositionPileup[maxIntervalLength];
+		this.positionsWithoutDuplicates = new PositionPileup[maxIntervalLength];
 
 		// initialize position pileups
 		for (int i = 0; i < positions.length; i++)

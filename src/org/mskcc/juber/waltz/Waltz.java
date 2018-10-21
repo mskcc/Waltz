@@ -52,14 +52,6 @@ import htsjdk.samtools.util.IntervalList;
  */
 public class Waltz
 {
-	// to be set depending on the input bed file
-	private static int maxRegionLength = 0;
-
-	public static int getMaxRegionLength()
-	{
-		return maxRegionLength;
-	}
-
 	// TODO compute genome size??
 	// right now, hard coding the genome size that is used only for
 	// reporting
@@ -147,7 +139,6 @@ public class Waltz
 			int numberOfLists, SAMFileHeader header) throws IOException
 	{
 		boolean addChr = hasChr(header);
-		int maxIntervalLength = 0;
 
 		IntervalList[] intervalLists = new IntervalList[numberOfLists];
 		for (int i = 0; i < intervalLists.length; i++)
@@ -183,18 +174,9 @@ public class Waltz
 			IntervalList intervalList = intervalLists[lineNumber
 					% numberOfLists];
 			intervalList.add(interval);
-
-			int length = end - start + 1;
-			if (length > maxIntervalLength)
-			{
-				maxIntervalLength = length;
-			}
 		}
 
 		reader.close();
-
-		// set the max region length for this run of Waltz
-		maxRegionLength = maxIntervalLength;
 		return intervalLists;
 	}
 

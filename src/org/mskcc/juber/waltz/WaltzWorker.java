@@ -28,8 +28,11 @@ package org.mskcc.juber.waltz;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
 
 import org.mskcc.juber.alignment.filters.AlignmentFilter;
+import org.mskcc.juber.genotype.GenotypeID;
 import org.mskcc.juber.waltz.pileup.RegionPileup;
 import org.mskcc.juber.waltz.pileup.processors.GenotypingProcessor;
 import org.mskcc.juber.waltz.pileup.processors.PileupMetricsProcessor;
@@ -97,8 +100,13 @@ public class WaltzWorker
 		{
 			String lociFilePath = moduleArgument;
 			processor = new GenotypingProcessor(new File(lociFilePath));
-			output.enableForMetrics();
+			List<GenotypeID> genotypes = ((GenotypingProcessor) processor)
+					.getGenotypeIDs();
+			adjustIntervalList(genotypes);
+
+			// output.enableForMetrics();
 			output.enableForGenotypes();
+
 		}
 		else if (module.equals("SignatureFinding"))
 		{
@@ -114,11 +122,107 @@ public class WaltzWorker
 		}
 	}
 
+	/**
+	 * Adjust intervals list for genotyping. Remove intervals that do not
+	 * overlap with any of the mutations. Expand intervals appropriately that
+	 * partially overlap with a mutation.
+	 * 
+	 * @param genotypes
+	 */
+	private void adjustIntervalList(List<GenotypeID> genotypes)
+	{
+		// pad 5 bases on each side of interval. This is to make sure splice
+		// sites are
+		// captured even when only exon boundaries are given.
+		intervalList = intervalList.padded(5, 5);
+		intervalList = intervalList.uniqued();
+
+		// make interval list of mutations
+		IntervalList mutationIntervalList = new IntervalList(
+				intervalList.getHeader());
+		for (GenotypeID genotype : genotypes)
+		{
+			mutationIntervalList.add(new Interval(genotype.contig,
+					genotype.position, genotype.endPosition));
+		}
+
+		mutationIntervalList = mutationIntervalList.uniqued();
+
+		// make new interval list that contains all mutation-interval pairs that
+		// overlap with each other
+		IntervalList newIntervalList = new IntervalList(
+				intervalList.getHeader());
+
+		Iterator<Interval> it = intervalList.iterator();
+		while (it.hasNext())
+		{
+			Interval interval = it.next();
+
+			Iterator<Interval> it1 = mutationIntervalList.iterator();
+			while (it1.hasNext())
+			{
+				Interval mutationInterval = it1.next();
+				if (overlap(interval, mutationInterval))
+				{
+					newIntervalList.add(interval);
+					newIntervalList.add(mutationInterval);
+				}
+			}
+		}
+
+		// update interval list that will be used for processing
+		intervalList = newIntervalList.uniqued();
+	}
+
+	/**
+	 * check if the interval contains/overlaps the genotype
+	 * 
+	 * @param interval
+	 * @param genotype
+	 * @return
+	 */
+	private boolean overlap(Interval interval1, Interval interval2)
+	{
+		if (!interval1.getContig().equals(interval2.getContig()))
+		{
+			return false;
+		}
+
+		// sort by start
+		if (interval2.getStart() < interval1.getStart())
+		{
+			Interval t = interval1;
+			interval1 = interval2;
+			interval2 = t;
+		}
+
+		if (interval1.getEnd() < interval2.getStart())
+		{
+			return false;
+		}
+
+		return true;
+	}
+
 	public Boolean process() throws IOException
 	{
 		long start = System.currentTimeMillis();
-		RegionPileup pileup = new RegionPileup(referenceFasta, insertMin,
-				insertMax);
+
+		// find out the maximum interval size
+		int maxIntervalLength = -1;
+		Iterator<Interval> it = intervalList.iterator();
+		while (it.hasNext())
+		{
+			Interval interval = it.next();
+			int length = interval.getEnd() - interval.getStart() + 1;
+			if (length > maxIntervalLength)
+			{
+				maxIntervalLength = length;
+			}
+		}
+
+		RegionPileup pileup = new RegionPileup(referenceFasta,
+				maxIntervalLength, insertMin, insertMax);
 
 		// for each interval
 		for (Interval interval : intervalList)

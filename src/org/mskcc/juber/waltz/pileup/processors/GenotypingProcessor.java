@@ -86,6 +86,18 @@ public class GenotypingProcessor implements PileupProcessor
 		};
 	}
 
+	public List<GenotypeID> getGenotypeIDs()
+	{
+		List<GenotypeID> list = new ArrayList<GenotypeID>();
+		for (GenotypeIDWithName g : genotypeIDsWithName)
+		{
+			list.add(g.genotypeID);
+		}
+
+		return list;
+
+	}
+
 	/**
 	 * make genotype ids from a parsed line from an input mutations files
 	 * 
@@ -145,14 +157,14 @@ public class GenotypingProcessor implements PileupProcessor
 	public void setRegionPileupView(RegionPileupView view)
 	{
 		this.pileup = view;
-		metricsProcessor = new PileupMetricsProcessor();
-		metricsProcessor.setRegionPileupView(pileup);
+		// metricsProcessor = new PileupMetricsProcessor();
+		// metricsProcessor.setRegionPileupView(pileup);
 	}
 
 	@Override
 	public void processRegion(WaltzOutput output) throws IOException
 	{
-		metricsProcessor.processRegion(output);
+		// metricsProcessor.processRegion(output);
 		processGenotypes(output);
 
 		// free the memory once we are done
