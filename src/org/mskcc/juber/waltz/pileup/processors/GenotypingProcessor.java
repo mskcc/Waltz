@@ -81,9 +81,18 @@ public class GenotypingProcessor implements PileupProcessor
 			String[] expandedParts = new String[mafColumns.size()];
 
 			// copy the original parts into expanded parts
-			for (int i = 0; i < parts.length; i++)
+			for (int i = 0; i < expandedParts.length; i++)
 			{
-				expandedParts[i] = parts[i];
+				if (i < parts.length)
+				{
+					expandedParts[i] = parts[i];
+				}
+
+				// remove nulls
+				if (expandedParts[i] == null)
+				{
+					expandedParts[i] = "";
+				}
 			}
 
 			GenotypeID genotypeID = makeGenotypeID(expandedParts);
@@ -972,7 +981,8 @@ public class GenotypingProcessor implements PileupProcessor
 					"Validation_Status", "Mutation_Status", "Sequencing_Phase",
 					"Sequence_Source", "Validation_Method", "Score", "BAM_File",
 					"Sequencer", "Tumor_Sample_UUID",
-					"Matched_Norm_Sample_UUID" };
+					"Matched_Norm_Sample_UUID", "t_depth", "t_ref_count",
+					"t_alt_count", "n_depth", "n_ref_count", "n_alt_count" };
 
 			for (int i = 0; i < sampleSpecificFields.length; i++)
 			{
