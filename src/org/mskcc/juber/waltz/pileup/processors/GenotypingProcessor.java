@@ -48,48 +48,90 @@ import org.mskcc.juber.waltz.pileup.RegionPileupView;
 
 import com.google.common.collect.Sets;
 
+import htsjdk.samtools.reference.IndexedFastaSequenceFile;
+
 public class GenotypingProcessor implements PileupProcessor
 {
 	private RegionPileupView pileup;
 	private PileupMetricsProcessor metricsProcessor;
-	private List<GenotypeIDWithName> genotypeIDsWithName;
-	private Comparator<Entry<GenotypeIDWithName, Set<String>>> fragmentCountComparator;
+	private List<GenotypeIDWithMafLine> genotypeIDsWithMafLine;
+	private Comparator<Entry<GenotypeIDWithMafLine, Set<String>>> fragmentCountComparator;
+	private String mafHeader;
+	private Map<String, Integer> mafColumns;
+	private IndexedFastaSequenceFile referenceFasta;
 
-	public GenotypingProcessor(File lociFile) throws IOException
+	public GenotypingProcessor(File lociFile,
+			IndexedFastaSequenceFile referenceFasta) throws IOException
 	{
-		genotypeIDsWithName = new ArrayList<GenotypeIDWithName>();
+		this.referenceFasta = referenceFasta;
+
+		genotypeIDsWithMafLine = new ArrayList<GenotypeIDWithMafLine>();
 
 		BufferedReader reader = new BufferedReader(new FileReader(lociFile));
 		String line = null;
 		String[] parts = null;
 
+		processMafHeader(reader.readLine());
+
 		while ((line = reader.readLine()) != null)
 		{
 			parts = line.split("\t");
-			GenotypeID genotypeID = makeGenotypeID(parts);
-			genotypeIDsWithName
-					.add(new GenotypeIDWithName(genotypeID, parts[4]));
+
+			// expanded parts include additional Waltz fields
+			String[] expandedParts = new String[mafColumns.size()];
+
+			// copy the original parts into expanded parts
+			for (int i = 0; i < parts.length; i++)
+			{
+				expandedParts[i] = parts[i];
+			}
+
+			GenotypeID genotypeID = makeGenotypeID(expandedParts);
+			genotypeIDsWithMafLine
+					.add(new GenotypeIDWithMafLine(genotypeID, expandedParts));
 		}
 
 		reader.close();
 
 		// create fragment count comparator
-		fragmentCountComparator = new Comparator<Entry<GenotypeIDWithName, Set<String>>>()
+		fragmentCountComparator = new Comparator<Entry<GenotypeIDWithMafLine, Set<String>>>()
 		{
 
 			@Override
-			public int compare(Entry<GenotypeIDWithName, Set<String>> arg0,
-					Entry<GenotypeIDWithName, Set<String>> arg1)
+			public int compare(Entry<GenotypeIDWithMafLine, Set<String>> arg0,
+					Entry<GenotypeIDWithMafLine, Set<String>> arg1)
 			{
 				return arg1.getValue().size() - arg0.getValue().size();
 			}
 		};
 	}
 
+	private void processMafHeader(String header)
+	{
+		mafColumns = new HashMap<String, Integer>();
+
+		// Add Waltz fields
+		mafHeader = header + "\tWaltz_total_t_depth"
+				+ "\tWaltz_total_t_alt_count" + "\tWaltz_MD_t_depth"
+				+ "\tWaltz_MD_t_alt_count";
+
+		String[] parts = mafHeader.split("\t");
+
+		for (int i = 0; i < parts.length; i++)
+		{
+			mafColumns.put(parts[i], i);
+		}
+	}
+
+	public String getMafHeader()
+	{
+		return mafHeader;
+	}
+
 	public List<GenotypeID> getGenotypeIDs()
 	{
 		List<GenotypeID> list = new ArrayList<GenotypeID>();
-		for (GenotypeIDWithName g : genotypeIDsWithName)
+		for (GenotypeIDWithMafLine g : genotypeIDsWithMafLine)
 		{
 			list.add(g.genotypeID);
 		}
@@ -99,12 +141,92 @@ public class GenotypingProcessor implements PileupProcessor
 	}
 
 	/**
-	 * make genotype ids from a parsed line from an input mutations files
+	 * make genotype ids from a parsed line from a maf file
 	 * 
 	 * @param parts
 	 * @return
 	 */
 	private GenotypeID makeGenotypeID(String[] parts)
+	{
+		String contig = parts[mafColumns.get("Chromosome")];
+		int position = Integer
+				.parseInt(parts[mafColumns.get("Start_Position")]);
+		String refString = parts[mafColumns.get("Reference_Allele")];
+		String altString = parts[mafColumns.get("Tumor_Seq_Allele2")];
+		String eventTypeString = parts[mafColumns.get("Variant_Type")];
+
+		if (eventTypeString.equals("SNP"))
+		{
+			byte[] ref = new byte[] { (byte) refString.charAt(0) };
+			byte[] alt = new byte[] { (byte) altString.charAt(0) };
+
+			return new GenotypeID(GenotypeEventType.SNV, contig, position, ref,
+					alt);
+		}
+		else if (eventTypeString.equals("DNP") || eventTypeString.equals("TNP")
+				|| eventTypeString.equals("MNP")
+				|| eventTypeString.equals("MNV"))
+		{
+			byte[] ref = new byte[refString.length()];
+			for (int i = 0; i < ref.length; i++)
+			{
+				ref[i] = (byte) refString.charAt(i);
+			}
+
+			byte[] alt = new byte[altString.length()];
+			for (int i = 0; i < alt.length; i++)
+			{
+				alt[i] = (byte) altString.charAt(i);
+			}
+
+			return new GenotypeID(GenotypeEventType.MNV, contig, position, ref,
+					alt);
+		}
+		else if (eventTypeString.equals("INS"))
+		{
+			byte[] ref = referenceFasta
+					.getSubsequenceAt(contig, position, position).getBases();
+			byte[] alt = new byte[altString.length() + 1];
+			alt[0] = ref[0];
+			for (int i = 1; i < alt.length; i++)
+			{
+				alt[i] = (byte) altString.charAt(i - 1);
+			}
+
+			return new GenotypeID(GenotypeEventType.INSERTION, contig, position,
+					ref, alt);
+		}
+		else if (eventTypeString.equals("DEL"))
+		{
+			position--;
+			byte[] alt = referenceFasta
+					.getSubsequenceAt(contig, position, position).getBases();
+			byte[] ref = new byte[refString.length() + 1];
+			ref[0] = alt[0];
+			for (int i = 1; i < ref.length; i++)
+			{
+				ref[i] = (byte) refString.charAt(i - 1);
+			}
+
+			return new GenotypeID(GenotypeEventType.DELETION, contig, position,
+					ref, alt);
+		}
+		else
+		{
+			System.err.println("Not Supported: " + contig + "\t" + position
+					+ "\t" + eventTypeString + "\t" + refString + "\t"
+					+ altString + "\n");
+			return null;
+		}
+	}
+
+	/**
+	 * make genotype ids from a parsed line from an input mutations files
+	 * 
+	 * @param parts
+	 * @return
+	 */
+	private GenotypeID makeGenotypeIDOld(String[] parts)
 	{
 		int position = Integer.parseInt(parts[1]);
 		byte[] ref = new byte[parts[2].length()];
@@ -173,20 +295,22 @@ public class GenotypingProcessor implements PileupProcessor
 
 	private void processGenotypes(WaltzOutput output) throws IOException
 	{
-		Set<GenotypeIDWithName> regionGenotypes = new HashSet<GenotypeIDWithName>();
+		Set<GenotypeIDWithMafLine> regionGenotypes = new HashSet<GenotypeIDWithMafLine>();
 
 		// pick out the genotypes contained in the current region/pileup
-		for (int i = 0; i < genotypeIDsWithName.size(); i++)
+		for (int i = 0; i < genotypeIDsWithMafLine.size(); i++)
 		{
-			GenotypeIDWithName genotypeIDWithName = genotypeIDsWithName.get(i);
-			if (genotypeIDWithName == null)
+			GenotypeIDWithMafLine genotypeIDWithMafLine = genotypeIDsWithMafLine
+					.get(i);
+			if (genotypeIDWithMafLine == null
+					|| genotypeIDWithMafLine.genotypeID == null)
 			{
 				continue;
 			}
 
-			if (pileup.contains(genotypeIDWithName.genotypeID))
+			if (pileup.contains(genotypeIDWithMafLine.genotypeID))
 			{
-				regionGenotypes.add(genotypeIDWithName);
+				regionGenotypes.add(genotypeIDWithMafLine);
 			}
 		}
 
@@ -196,8 +320,7 @@ public class GenotypingProcessor implements PileupProcessor
 			return;
 		}
 
-		String outString = null;
-		outString = processGenotypeSet(regionGenotypes);
+		String outString = processGenotypeSet(regionGenotypes);
 		output.toGenotypesWriter(outString + "\n");
 	}
 
@@ -217,40 +340,44 @@ public class GenotypingProcessor implements PileupProcessor
 	 * @param regionGenotypes
 	 * @return
 	 */
-	private String processGenotypeSet(Set<GenotypeIDWithName> regionGenotypes)
+	private String processGenotypeSet(
+			Set<GenotypeIDWithMafLine> regionGenotypes)
 	{
 		StringBuilder result = null;
 
-		Map<Set<GenotypeIDWithName>, Set<String>> powerSetFragments = getSupportingFragmentsForPowerSet(
+		Map<Set<GenotypeIDWithMafLine>, Set<String>> powerSetFragments = getSupportingFragmentsForPowerSet(
 				regionGenotypes);
 
 		// process each element of the powerset
-		for (Set<GenotypeIDWithName> s : powerSetFragments.keySet())
+		for (Set<GenotypeIDWithMafLine> s : powerSetFragments.keySet())
 		{
 			Genotype genotype = null;
+
+			Iterator<GenotypeIDWithMafLine> it = s.iterator();
+			GenotypeIDWithMafLine firstGenotypeIDWithMafLine = it.next();
+			String[] mafLineParts = firstGenotypeIDWithMafLine.mafLineParts
+					.clone();
 
 			// a single, traditional genotype
 			if (s.size() == 1)
 			{
-				Iterator<GenotypeIDWithName> it = s.iterator();
-				GenotypeIDWithName genotypeIDWithName = it.next();
-				genotype = new Genotype(genotypeIDWithName.name,
-						genotypeIDWithName.genotypeID);
+				genotype = new Genotype(firstGenotypeIDWithMafLine.name,
+						firstGenotypeIDWithMafLine.genotypeID);
 			}
 			else
 			{
 				StringBuilder name = null;
 				// build name
-				for (GenotypeIDWithName genotypeIDWithName : s)
+				for (GenotypeIDWithMafLine genotypeIDWitMafLine : s)
 				{
 					if (name == null)
 					{
-						name = new StringBuilder(genotypeIDWithName.name);
+						name = new StringBuilder(genotypeIDWitMafLine.name);
 					}
 					else
 					{
-						name.append("-");
-						name.append(genotypeIDWithName.name);
+						name.append("+");
+						name.append(genotypeIDWitMafLine.name);
 					}
 				}
 
@@ -291,17 +418,63 @@ public class GenotypingProcessor implements PileupProcessor
 			// record genotype
 			if (result == null)
 			{
-				result = new StringBuilder(genotype.toString());
+				result = new StringBuilder(
+						makeOutputMafLine(genotype, mafLineParts));
 			}
 			else
 			{
 				result.append(System.lineSeparator());
-				result.append(genotype.toString());
+				result.append(makeOutputMafLine(genotype, mafLineParts));
 			}
 		}
 
 		return result.toString();
 
+	}
+
+	/**
+	 * make the line that will go to the output as a maf line
+	 * 
+	 * @param genotype
+	 * @param mafLineParts
+	 * @return
+	 */
+	private String makeOutputMafLine(Genotype genotype, String[] mafLineParts)
+	{
+		// composite genotype, delete all fields and add composite name to
+		// Variant_Type
+		if (genotype.id == null)
+		{
+			// clear all fields
+			for (int i = 0; i < mafLineParts.length; i++)
+			{
+				mafLineParts[i] = "";
+			}
+
+			// add composite name
+			mafLineParts[mafColumns.get("Variant_Type")] = "COMPOSITE:"
+					+ genotype.name;
+		}
+
+		// add Waltz genotyping info
+		mafLineParts[mafColumns.get("Waltz_total_t_depth")] = ""
+				+ genotype.totalCoverage;
+		mafLineParts[mafColumns.get("Waltz_total_t_alt_count")] = ""
+				+ genotype.totalSupportingCoverage;
+		mafLineParts[mafColumns.get("Waltz_MD_t_depth")] = ""
+				+ genotype.uniqueCoverage;
+		mafLineParts[mafColumns.get("Waltz_MD_t_alt_count")] = ""
+				+ genotype.uniqueSupportingCoverage;
+
+		// make a string
+		StringBuilder s = new StringBuilder(mafLineParts[0]);
+		for (int i = 1; i < mafLineParts.length; i++)
+		{
+			s.append("\t");
+			s.append(mafLineParts[i]);
+		}
+
+		return s.toString();
 	}
 
 	/**
@@ -311,13 +484,13 @@ public class GenotypingProcessor implements PileupProcessor
 	 * @param sNVs
 	 * @return
 	 */
-	private Map<Set<GenotypeIDWithName>, Set<String>> getSupportingFragmentsForPowerSet(
-			Set<GenotypeIDWithName> genotypeIDsWithName)
+	private Map<Set<GenotypeIDWithMafLine>, Set<String>> getSupportingFragmentsForPowerSet(
+			Set<GenotypeIDWithMafLine> genotypeIDsWithName)
 	{
 		// find supporting fragments for individual genotypes
-		Map<GenotypeIDWithName, Set<String>> supportingFragments = new HashMap<GenotypeIDWithName, Set<String>>();
-		Set<GenotypeIDWithName> nonZeroGenotypes = new HashSet<GenotypeIDWithName>();
-		for (GenotypeIDWithName genotypeIDWithName : genotypeIDsWithName)
+		Map<GenotypeIDWithMafLine, Set<String>> supportingFragments = new HashMap<GenotypeIDWithMafLine, Set<String>>();
+		Set<GenotypeIDWithMafLine> nonZeroGenotypes = new HashSet<GenotypeIDWithMafLine>();
+		for (GenotypeIDWithMafLine genotypeIDWithName : genotypeIDsWithName)
 		{
 			Set<String> fragments = null;
 			// MNV needs a bit of special treatment since only constituent SNVs
@@ -345,7 +518,7 @@ public class GenotypingProcessor implements PileupProcessor
 		}
 
 		// compute powerset only for the genotypes with non-zero support
-		Set<Set<GenotypeIDWithName>> powerSet = null;
+		Set<Set<GenotypeIDWithMafLine>> powerSet = null;
 		if (nonZeroGenotypes.size() <= 5)
 		{
 			// choose all non-zero genotypes
@@ -354,13 +527,13 @@ public class GenotypingProcessor implements PileupProcessor
 		else
 		{
 			// choose top 5 non-zero genotypes by number of supporting fragments
-			Set<Entry<GenotypeIDWithName, Set<String>>> entries = supportingFragments
+			Set<Entry<GenotypeIDWithMafLine, Set<String>>> entries = supportingFragments
 					.entrySet();
-			List<Entry<GenotypeIDWithName, Set<String>>> list = new ArrayList<Entry<GenotypeIDWithName, Set<String>>>(
+			List<Entry<GenotypeIDWithMafLine, Set<String>>> list = new ArrayList<Entry<GenotypeIDWithMafLine, Set<String>>>(
 					entries);
 			Collections.sort(list, fragmentCountComparator);
 
-			Set<GenotypeIDWithName> chosenGenotypeIDs = new HashSet<GenotypeIDWithName>();
+			Set<GenotypeIDWithMafLine> chosenGenotypeIDs = new HashSet<GenotypeIDWithMafLine>();
 			for (int i = 0; i < 5; i++)
 			{
 				if (list.get(i).getValue().size() == 0)
@@ -374,12 +547,12 @@ public class GenotypingProcessor implements PileupProcessor
 			powerSet = Sets.powerSet(chosenGenotypeIDs);
 		}
 
-		Set<Set<GenotypeIDWithName>> processingSet = new HashSet<Set<GenotypeIDWithName>>(
+		Set<Set<GenotypeIDWithMafLine>> processingSet = new HashSet<Set<GenotypeIDWithMafLine>>(
 				powerSet);
 		// add individual genotypes to the processing set
-		for (GenotypeIDWithName genotypeIDWithName : genotypeIDsWithName)
+		for (GenotypeIDWithMafLine genotypeIDWithName : genotypeIDsWithName)
 		{
-			Set<GenotypeIDWithName> s = new HashSet<GenotypeIDWithName>();
+			Set<GenotypeIDWithMafLine> s = new HashSet<GenotypeIDWithMafLine>();
 			s.add(genotypeIDWithName);
 			processingSet.add(s);
 		}
@@ -387,8 +560,8 @@ public class GenotypingProcessor implements PileupProcessor
 		powerSet = null;
 
 		// populate the returning set
-		Map<Set<GenotypeIDWithName>, Set<String>> returningSet = new HashMap<Set<GenotypeIDWithName>, Set<String>>();
-		for (Set<GenotypeIDWithName> s : processingSet)
+		Map<Set<GenotypeIDWithMafLine>, Set<String>> returningSet = new HashMap<Set<GenotypeIDWithMafLine>, Set<String>>();
+		for (Set<GenotypeIDWithMafLine> s : processingSet)
 		{
 			if (s.isEmpty())
 			{
@@ -411,11 +584,11 @@ public class GenotypingProcessor implements PileupProcessor
 	 * @param supportingFragments
 	 * @return
 	 */
-	private Set<String> getIntersection(Set<GenotypeIDWithName> genotypeIDs,
-			Map<GenotypeIDWithName, Set<String>> supportingFragments)
+	private Set<String> getIntersection(Set<GenotypeIDWithMafLine> genotypeIDs,
+			Map<GenotypeIDWithMafLine, Set<String>> supportingFragments)
 	{
 		Set<String> intersecting = null;
-		for (GenotypeIDWithName genotypeIDWithName : genotypeIDs)
+		for (GenotypeIDWithMafLine genotypeIDWithName : genotypeIDs)
 		{
 			Set<String> supporting = supportingFragments
 					.get(genotypeIDWithName);
@@ -498,13 +671,13 @@ public class GenotypingProcessor implements PileupProcessor
 	 * @param s
 	 * @return
 	 */
-	private ContineousSpan computeSpan(Set<GenotypeIDWithName> s)
+	private ContineousSpan computeSpan(Set<GenotypeIDWithMafLine> s)
 	{
 		String contig = null;
 		int start = 0;
 		int end = 0;
 
-		for (GenotypeIDWithName genotypeIDWithName : s)
+		for (GenotypeIDWithMafLine genotypeIDWithName : s)
 		{
 			GenotypeID genotypeID = genotypeIDWithName.genotypeID;
 
@@ -737,15 +910,81 @@ public class GenotypingProcessor implements PileupProcessor
 		return genotype.toString();
 	}
 
-	private class GenotypeIDWithName
+	private class GenotypeIDWithMafLine
 	{
 		public final GenotypeID genotypeID;
 		public final String name;
+		String[] mafLineParts;
 
-		public GenotypeIDWithName(GenotypeID genotypeID, String name)
+		public GenotypeIDWithMafLine(GenotypeID genotypeID,
+				String[] mafLineParts)
 		{
 			this.genotypeID = genotypeID;
-			this.name = name;
+			this.mafLineParts = mafLineParts;
+			this.name = makeGenotypeName(mafLineParts);
+
+			clearSampleSpecificFields();
+		}
+
+		private String makeGenotypeName(String[] mafLineParts)
+		{
+			String name = null;
+			if (mafColumns.get("Hugo_Symbol") == null
+					|| mafColumns.get("HGVSp_Short") == null
+					|| mafLineParts[mafColumns.get("Hugo_Symbol")].equals("")
+					|| mafLineParts[mafColumns.get("HGVSp_Short")].equals(""))
+			{
+				String contig = mafLineParts[mafColumns.get("Chromosome")];
+				int position = Integer.parseInt(
+						mafLineParts[mafColumns.get("Start_Position")]);
+				String refString = mafLineParts[mafColumns
+						.get("Reference_Allele")];
+				String altString = mafLineParts[mafColumns
+						.get("Tumor_Seq_Allele2")];
+				String eventTypeString = mafLineParts[mafColumns
+						.get("Variant_Type")];
+
+				name = contig + "-" + position + "-" + eventTypeString + "-"
+						+ refString + "-" + altString;
+			}
+			else
+			{
+				name = mafLineParts[mafColumns.get("Hugo_Symbol")] + "."
+						+ mafLineParts[mafColumns.get("HGVSp_Short")];
+			}
+
+			return name;
+
+		}
+
+		/**
+		 * from the maf line parts, clear the sample-specific fields that don't
+		 * make sense in the context of genotyping
+		 */
+		private void clearSampleSpecificFields()
+		{
+			String[] sampleSpecificFields = new String[] {
+					"Tumor_Sample_Barcode", "Matched_Norm_Sample_Barcode",
+					"Match_Norm_Seq_Allele1", "Match_Norm_Seq_Allele2",
+					"Tumor_Validation_Allele1", "Tumor_Validation_Allele2",
+					"Match_Norm_Validation_Allele1",
+					"Match_Norm_Validation_Allele2", "Verification_Status",
+					"Validation_Status", "Mutation_Status", "Sequencing_Phase",
+					"Sequence_Source", "Validation_Method", "Score", "BAM_File",
+					"Sequencer", "Tumor_Sample_UUID",
+					"Matched_Norm_Sample_UUID" };
+
+			for (int i = 0; i < sampleSpecificFields.length; i++)
+			{
+				Integer columnNumber = mafColumns.get(sampleSpecificFields[i]);
+				if (columnNumber == null)
+				{
+					continue;
+				}
+
+				mafLineParts[columnNumber] = "";
+			}
+
 		}
 	}
 

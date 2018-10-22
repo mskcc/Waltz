@@ -74,10 +74,12 @@ public class WaltzOutput
 						sampleName + "-intervals-without-duplicates.txt"));
 	}
 
-	public void enableForGenotypes() throws IOException
+	public void enableForGenotypes(String mafHeader) throws IOException
 	{
 		this.genotypesWriter = new BufferedWriter(
-				new FileWriter(sampleName + "-genotypes.txt"));
+				new FileWriter(sampleName + "-genotypes.maf"));
+		
+		write(genotypesWriter, mafHeader + "\n");
 	}
 
 	public void enableForSignatureFinding() throws IOException

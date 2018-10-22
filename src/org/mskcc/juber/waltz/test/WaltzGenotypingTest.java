@@ -68,7 +68,7 @@ public class WaltzGenotypingTest
 		String intervalsBedFile = "/Users/patelj1/workspace/Waltz/bedFiles/MSK-ACCESS-V1_0-A.bed";
 		// String intervalsBedFile = "bedFiles/multibase-substitution-test.bed";
 
-		String moduleArgument = "/Users/patelj1/workspace/Waltz/Genotyping/mutationsFiles/test-mutation-file.txt";
+		String moduleArgument = "/Users/patelj1/workspace/Waltz/Genotyping/mutationsFiles/test.maf";
 		// String moduleArgument =
 		// "/Users/patelj1/workspace/Waltz/Genotyping/mutationsFiles/breast-carcinoma-8-gene-hotspots.txt";
 

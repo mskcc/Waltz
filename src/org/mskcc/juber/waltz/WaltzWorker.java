@@ -99,13 +99,13 @@ public class WaltzWorker
 		else if (module.equals("Genotyping"))
 		{
 			String lociFilePath = moduleArgument;
-			processor = new GenotypingProcessor(new File(lociFilePath));
+			processor = new GenotypingProcessor(new File(lociFilePath), referenceFasta);
 			List<GenotypeID> genotypes = ((GenotypingProcessor) processor)
 					.getGenotypeIDs();
 			adjustIntervalList(genotypes);
 
 			// output.enableForMetrics();
-			output.enableForGenotypes();
+			output.enableForGenotypes(((GenotypingProcessor) processor).getMafHeader());
 
 		}
 		else if (module.equals("SignatureFinding"))
