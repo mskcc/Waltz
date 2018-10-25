@@ -55,7 +55,7 @@ public class WaltzGenotypingTest
 		// String module = "SignatureFinding";
 
 		// String filterType = "BasicFilter";
-		String minimumMappingQuality = "1";
+		String minimumMappingQuality = "20";
 
 		String bamFile = "/Users/patelj1/workspace/Waltz/bamFiles/Hapmap-ctrl-1_S2_001_cl_aln_srt_MD_IR_FX_BR.bam";
 		// String bamFile =
@@ -68,7 +68,7 @@ public class WaltzGenotypingTest
 		String intervalsBedFile = "/Users/patelj1/workspace/Waltz/bedFiles/MSK-ACCESS-V1_0-A.bed";
 		// String intervalsBedFile = "bedFiles/multibase-substitution-test.bed";
 
-		String moduleArgument = "/Users/patelj1/workspace/Waltz/Genotyping/mutationsFiles/test-big.maf";
+		String moduleArgument = "/Users/patelj1/workspace/Waltz/Genotyping/mutationsFiles/test.maf";
 		// String moduleArgument =
 		// "/Users/patelj1/workspace/Waltz/Genotyping/mutationsFiles/breast-carcinoma-8-gene-hotspots.txt";
 
