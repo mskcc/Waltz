@@ -28,11 +28,13 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -49,12 +51,14 @@ import org.mskcc.juber.waltz.pileup.RegionPileupView;
 import com.google.common.collect.Sets;
 
 import htsjdk.samtools.reference.IndexedFastaSequenceFile;
+import htsjdk.samtools.util.Interval;
+import htsjdk.samtools.util.StringUtil;
 
 public class GenotypingProcessor implements PileupProcessor
 {
 	private RegionPileupView pileup;
 	private PileupMetricsProcessor metricsProcessor;
-	private List<GenotypeIDWithMafLine> genotypeIDsWithMafLine;
+	private Set<GenotypeIDWithMafLine> genotypeIDsWithMafLine;
 	private Comparator<Entry<GenotypeIDWithMafLine, Set<String>>> fragmentCountComparator;
 	private String mafHeader;
 	private Map<String, Integer> mafColumns;
@@ -65,7 +69,7 @@ public class GenotypingProcessor implements PileupProcessor
 	{
 		this.referenceFasta = referenceFasta;
 
-		genotypeIDsWithMafLine = new ArrayList<GenotypeIDWithMafLine>();
+		genotypeIDsWithMafLine = new HashSet<GenotypeIDWithMafLine>();
 
 		BufferedReader reader = new BufferedReader(new FileReader(lociFile));
 		String line = null;
@@ -96,6 +100,11 @@ public class GenotypingProcessor implements PileupProcessor
 			}
 
 			GenotypeID genotypeID = makeGenotypeID(expandedParts);
+			if (genotypeID == null)
+			{
+				continue;
+			}
+
 			genotypeIDsWithMafLine
 					.add(new GenotypeIDWithMafLine(genotypeID, expandedParts));
 		}
@@ -117,7 +126,7 @@ public class GenotypingProcessor implements PileupProcessor
 
 	private void processMafHeader(String header)
 	{
-		mafColumns = new HashMap<String, Integer>();
+		mafColumns = new LinkedHashMap<String, Integer>();
 
 		// Add Waltz fields
 		mafHeader = header + "\tWaltz_total_t_depth"
@@ -137,16 +146,24 @@ public class GenotypingProcessor implements PileupProcessor
 		return mafHeader;
 	}
 
-	public List<GenotypeID> getGenotypeIDs()
+	public Set<Interval> getGenotypesAsIntervals()
 	{
-		List<GenotypeID> list = new ArrayList<GenotypeID>();
-		for (GenotypeIDWithMafLine g : genotypeIDsWithMafLine)
+		Set<Interval> intervals = new HashSet<Interval>();
+
+		for (GenotypeIDWithMafLine genotypeIDWithMafLine : genotypeIDsWithMafLine)
 		{
-			list.add(g.genotypeID);
+			if (genotypeIDWithMafLine == null
+					|| genotypeIDWithMafLine.genotypeID == null)
+			{
+				continue;
+			}
+
+			GenotypeID id = genotypeIDWithMafLine.genotypeID;
+			intervals.add(new Interval(id.contig, id.position, id.endPosition,
+					false, genotypeIDWithMafLine.name));
 		}
 
-		return list;
-
+		return intervals;
 	}
 
 	/**
@@ -164,6 +181,17 @@ public class GenotypingProcessor implements PileupProcessor
 		String altString = parts[mafColumns.get("Tumor_Seq_Allele2")];
 		String eventTypeString = parts[mafColumns.get("Variant_Type")];
 
+		// complex event
+		if ((eventTypeString.equals("INS") || eventTypeString.equals("DEL"))
+				&& !refString.equals("-") && !altString.equals("-"))
+		{
+			String line = StringUtil.join("\t", Arrays.asList(parts));
+
+			System.out.println("Complex events not supported yet!");
+			System.out.println(line);
+			return null;
+		}
+
 		if (eventTypeString.equals("SNP"))
 		{
 			byte[] ref = new byte[] { (byte) refString.charAt(0) };
@@ -174,7 +202,8 @@ public class GenotypingProcessor implements PileupProcessor
 		}
 		else if (eventTypeString.equals("DNP") || eventTypeString.equals("TNP")
 				|| eventTypeString.equals("MNP")
-				|| eventTypeString.equals("MNV"))
+				|| eventTypeString.equals("MNV")
+				|| eventTypeString.equals("ONP"))
 		{
 			byte[] ref = new byte[refString.length()];
 			for (int i = 0; i < ref.length; i++)
@@ -307,10 +336,9 @@ public class GenotypingProcessor implements PileupProcessor
 		Set<GenotypeIDWithMafLine> regionGenotypes = new HashSet<GenotypeIDWithMafLine>();
 
 		// pick out the genotypes contained in the current region/pileup
-		for (int i = 0; i < genotypeIDsWithMafLine.size(); i++)
+		// for (int i = 0; i < genotypeIDsWithMafLine.size(); i++)
+		for (GenotypeIDWithMafLine genotypeIDWithMafLine : genotypeIDsWithMafLine)
 		{
-			GenotypeIDWithMafLine genotypeIDWithMafLine = genotypeIDsWithMafLine
-					.get(i);
 			if (genotypeIDWithMafLine == null
 					|| genotypeIDWithMafLine.genotypeID == null)
 			{
@@ -958,8 +986,15 @@ public class GenotypingProcessor implements PileupProcessor
 			}
 			else
 			{
+				String proteinChange = mafLineParts[mafColumns
+						.get("HGVSp_Short")];
+				if (proteinChange.startsWith("p."))
+				{
+					proteinChange = proteinChange.substring(2);
+				}
+
 				name = mafLineParts[mafColumns.get("Hugo_Symbol")] + "."
-						+ mafLineParts[mafColumns.get("HGVSp_Short")];
+						+ proteinChange;
 			}
 
 			return name;
@@ -996,6 +1031,47 @@ public class GenotypingProcessor implements PileupProcessor
 			}
 
 		}
-	}
 
+		@Override
+		public int hashCode()
+		{
+			final int prime = 31;
+			int result = 1;
+			result = prime * result
+					+ ((genotypeID == null) ? 0 : genotypeID.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj)
+		{
+			if (this == obj)
+			{
+				return true;
+			}
+			if (obj == null)
+			{
+				return false;
+			}
+			if (getClass() != obj.getClass())
+			{
+				return false;
+			}
+			GenotypeIDWithMafLine other = (GenotypeIDWithMafLine) obj;
+
+			if (genotypeID == null)
+			{
+				if (other.genotypeID != null)
+				{
+					return false;
+				}
+			}
+			else if (!genotypeID.equals(other.genotypeID))
+			{
+				return false;
+			}
+
+			return true;
+		}
+	}
 }

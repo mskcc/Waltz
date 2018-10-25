@@ -30,6 +30,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.mskcc.juber.alignment.filters.AlignmentFilter;
 import org.mskcc.juber.genotype.GenotypeID;
@@ -99,13 +101,15 @@ public class WaltzWorker
 		else if (module.equals("Genotyping"))
 		{
 			String lociFilePath = moduleArgument;
-			processor = new GenotypingProcessor(new File(lociFilePath), referenceFasta);
-			List<GenotypeID> genotypes = ((GenotypingProcessor) processor)
-					.getGenotypeIDs();
-			adjustIntervalList(genotypes);
+			processor = new GenotypingProcessor(new File(lociFilePath),
+					referenceFasta);
+			Set<Interval> genotypeIntervals = ((GenotypingProcessor) processor)
+					.getGenotypesAsIntervals();
+			adjustIntervalList(genotypeIntervals);
 
 			// output.enableForMetrics();
-			output.enableForGenotypes(((GenotypingProcessor) processor).getMafHeader());
+			output.enableForGenotypes(
+					((GenotypingProcessor) processor).getMafHeader());
 
 		}
 		else if (module.equals("SignatureFinding"))
@@ -129,49 +133,51 @@ public class WaltzWorker
 	 * 
 	 * @param genotypes
 	 */
-	private void adjustIntervalList(List<GenotypeID> genotypes)
+	private void adjustIntervalList(Set<Interval> genotypeIntervals)
 	{
 		// pad 5 bases on each side of interval. This is to make sure splice
-		// sites are
-		// captured even when only exon boundaries are given.
+		// sites are captured even when only exon boundaries are given.
 		intervalList = intervalList.padded(5, 5);
 		intervalList = intervalList.uniqued();
 
-		// make interval list of mutations
-		IntervalList mutationIntervalList = new IntervalList(
-				intervalList.getHeader());
-		for (GenotypeID genotype : genotypes)
-		{
-			mutationIntervalList.add(new Interval(genotype.contig,
-					genotype.position, genotype.endPosition));
-		}
-
-		mutationIntervalList = mutationIntervalList.uniqued();
-
-		// make new interval list that contains all mutation-interval pairs that
-		// overlap with each other
+		// make new interval list that contains the parts of each interval that
+		// overlaps with all the mutations overlapping with that interval.
 		IntervalList newIntervalList = new IntervalList(
 				intervalList.getHeader());
 
-		Iterator<Interval> it = intervalList.iterator();
-		while (it.hasNext())
+		for (Interval interval : intervalList.getIntervals())
 		{
-			Interval interval = it.next();
+			IntervalList t = new IntervalList(intervalList.getHeader());
 
-			Iterator<Interval> it1 = mutationIntervalList.iterator();
-			while (it1.hasNext())
+			for (Interval genotypeInterval : genotypeIntervals)
 			{
-				Interval mutationInterval = it1.next();
-				if (overlap(interval, mutationInterval))
+				if (interval.intersects(genotypeInterval))
 				{
-					newIntervalList.add(interval);
-					newIntervalList.add(mutationInterval);
+					t.add(genotypeInterval);
 				}
 			}
+
+			// no given mutation overlaps with current interval
+			if (t.size() == 0)
+			{
+				continue;
+			}
+
+			// create one spanning interval that spans all the genotypes
+			// overlapping with the current interval
+			t = t.sorted();
+			List<Interval> list = t.getIntervals();
+			String contig = list.get(0).getContig();
+			int start = list.get(0).getStart();
+			int end = list.get(list.size() - 1).getEnd();
+			Interval newInterval = new Interval(contig, start, end, false,
+					interval.getName());
+			newInterval = newInterval.pad(5, 5);
+			newIntervalList.add(newInterval);
 		}
 
 		// update interval list that will be used for processing
-		intervalList = newIntervalList.uniqued();
+		intervalList = newIntervalList;
 	}
 
 	/**
