@@ -2,7 +2,8 @@
 
 # $1 - directory containing bam files
 # $2 - intervals bed file
-# $3 - mutations file
+# $3 - maf file with the mutations to be profiled
+
 
 referenceFasta=~/resources/impact-GRCh37/Homo_sapiens_assembly19.fasta
 

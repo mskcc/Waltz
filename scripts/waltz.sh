@@ -4,11 +4,10 @@
 # $2 - minimum mapping quality
 # $3 - bam file
 # $4 - reference fasta file
-# $5 - number of threads
-# $6 - interval bed file
-# $7 - module argument
+# $5 - interval bed file
+# $6 - module argument
 	# empty for Metrics module
-	# loci bed file for Genotyping module
+	# maf file with mutations to be profiled
 	# comma-separated list of signatures to look for for SignatureFinding module
 
 java=/opt/common/CentOS_6/java/jdk1.8.0_31/bin/java
