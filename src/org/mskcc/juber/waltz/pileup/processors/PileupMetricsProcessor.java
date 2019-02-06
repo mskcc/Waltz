@@ -2,22 +2,24 @@
  *
  * @author Juber Patel
  *
- * Copyright (c) 2017 Innovation Lab, CMO, MSKCC.
+ *         Copyright (c) 2017 Innovation Lab, CMO, MSKCC.
  *
- * This software was developed at the Innovation Lab, Center for Molecular Oncology, 
- * Memorial Sloan Kettering Cancer Center, New York, New York.
+ *         This software was developed at the Innovation Lab, Center for
+ *         Molecular Oncology,
+ *         Memorial Sloan Kettering Cancer Center, New York, New York.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *         Licensed under the Apache License, Version 2.0 (the "License");
+ *         you may not use this file except in compliance with the License.
+ *         You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *         http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *         Unless required by applicable law or agreed to in writing, software
+ *         distributed under the License is distributed on an "AS IS" BASIS,
+ *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ *         implied.
+ *         See the License for the specific language governing permissions and
+ *         limitations under the License.
  *******************************************************************************/
 /**
  * 
@@ -27,6 +29,7 @@ package org.mskcc.juber.waltz.pileup.processors;
 import java.io.IOException;
 
 import org.mskcc.juber.waltz.WaltzOutput;
+import org.mskcc.juber.waltz.pileup.FragmentSpan;
 import org.mskcc.juber.waltz.pileup.PositionPileup;
 import org.mskcc.juber.waltz.pileup.RegionPileupView;
 
@@ -111,11 +114,22 @@ public class PileupMetricsProcessor implements PileupProcessor
 
 		// collect and write interval-level metrics
 		IntervalMetrics intervalMetrics = new IntervalMetrics(pileup.interval,
-				pileup.positions);
+				pileup.positions, pileup.fragmentSpans.size());
 		output.toIntervalsWriter(intervalMetrics.toString());
 
+		// count unique fragments
+		int uniqueFragments = 0;
+		for (FragmentSpan fragment : pileup.fragmentSpans.values())
+		{
+			if (!fragment.isDuplicate())
+			{
+				uniqueFragments++;
+			}
+		}
+
 		IntervalMetrics intervalMetricsWithoutDuplicates = new IntervalMetrics(
-				pileup.interval, pileup.positionsWithoutDuplicates);
+				pileup.interval, pileup.positionsWithoutDuplicates,
+				uniqueFragments);
 		output.toIntervalsWithoutDuplicatesWriter(
 				intervalMetricsWithoutDuplicates.toString());
 	}
