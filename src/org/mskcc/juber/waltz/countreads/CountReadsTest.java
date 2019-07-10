@@ -35,7 +35,7 @@ public class CountReadsTest
 		//String bam = "t.bam";
 		//String bam = "bamFiles/DS-puma-0006-PL-C17-IGO-05500-BO-7_bc107_5500-BO_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam";
 		String bam = "bamFiles/"
-				+ "MSK-L-009-cf-IGO-05500-DY-23_bc214_5500-DY-4_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam";
+				+ "C-WUC3WV-N002-d_cl_aln_srt_MD_IR_FX_BR.bam";
 
 		// String bedFile = "bedFiles/impact410-mcpyv-ebv-hpv.bed";
 		// String bedFile = "bedFiles/Sarath-10-genes.bed";

@@ -57,7 +57,7 @@ public class WaltzPileupMetricsTest
 		String minimumMappingQuality = "1";
 
 		String bamFile = "bamFiles/"
-				+ "MSK-L-009-cf-IGO-05500-DY-23_bc214_5500-DY-4_L000_mrg_cl_aln_srt_MD_IR_FX_BR.bam";
+				+ "C-WUC3WV-N002-d_cl_aln_srt_MD_IR_FX_BR.bam";
 
 		// String referenceFasta =
 		// "/Users/patelj1/resources/hg19-ucsc/human_hg19.fa";
