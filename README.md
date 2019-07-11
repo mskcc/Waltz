@@ -30,6 +30,12 @@ Java 1.8 or above is required.
 
 java -server -Xms4g -Xmx4g -cp Waltz.jar org.mskcc.juber.waltz.countreads.CountReads bam-file coverageThreshold canonical-transcripts-bed-file intervals-bed-file
 
+where 
+coverageThreshold is the average coverage above which a contiguous region should be considered covered (suggested value: 5)
+canonical-transcripts-bed-file is the bed file with all exons in across the genomes (included above)
+intervals-bed-file is the bed file of chosen genomic intervals
+
+
 This produces 3 files:  
 .covered-regions: regions of contiguous coverage, annotated with canonical transcripts. Useful for checking what regions are actually covered in the bam file. Columns: chr, start, end, length, average total coverage in the contiguous region.
 
@@ -40,7 +46,7 @@ This produces 3 files:
  
 #### Generate metrics specific to given genomic regions
 
-java -server -Xms4g -Xmx4g -cp Waltz.jar org.mskcc.juber.waltz.Waltz PileupMetrics mappinngQualityThreshold bam-file reference-fasta bed-file
+java -server -Xms4g -Xmx4g -cp Waltz.jar org.mskcc.juber.waltz.Waltz PileupMetrics mappinngQualityThreshold bam-file reference-fasta intervals-bed-file
 
 This produces 4 different files:
 -pileup.txt: per-position fragment count for different alleles. Columns: chr, position, ref, depth (including N's), fragment counts for A, C, G, T, insertions, deletions, soft clip start, soft clip end, hard clip start, hard clip end
@@ -50,12 +56,26 @@ This produces 4 different files:
 -intervals.txt: stats per genomic interval. Columns: chr, start, end, interval name, interval length, peak coverage, average coverage, GC fraction, number of fragments mapped
 
 -intervals-without-duplicates.txt: similar to above but only unique fragments are considered
+
+
+#### Collect metrics across samples
+
+Run aggregate-bam-metrics.sh script in the folder where the above output files are present to collect metrics across samples.
+
+This produces 3 main files with self-explanatory headers.
+read-counts.txt: collection of metrics from *.read-counts files
+
+waltz-coverage.txt: per sample coverage calculated across chosen genomic intervals
+
+fragment-sizes.txt: fragment size distributions for all samples
+
  
 
 
 ### 2. Genotyping
 
 java -server -Xms4g -Xmx4g -cp Waltz.jar org.mskcc.juber.waltz.Waltz Genotyping mappinngQualityThreshold bam-file reference-fasta bed-file mutations-maf-file
+
 
 
 
