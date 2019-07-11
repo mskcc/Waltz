@@ -28,11 +28,29 @@ Java 1.8 or above is required.
 
 #### Generate bam level metrics
 
-java -server -Xms4g -Xmx4g -cp Waltz.jar org.mskcc.juber.waltz.countreads.CountReads bam-file coverageThreshold transcripts-file bed-file
+java -server -Xms4g -Xmx4g -cp Waltz.jar org.mskcc.juber.waltz.countreads.CountReads bam-file coverageThreshold canonical-transcripts-bed-file intervals-bed-file
 
-#### Generate metrics specific to given regions
+This produces 3 files:  
+.covered-regions: regions of contiguous coverage, annotated with canonical transcripts. Useful for checking what regions are actually covered in the bam file. Columns: chr, start, end, length, average total coverage in the contiguous region.
+
+.read-counts: bam-level stats. Columns: bam file name, total reads, unmapped reads, total mapped reads, unique mapped reads, duplicate fraction, total on-target reads, unique on-target reads, total on-target rate, unique on-target rate
+
+.fragment-sizes: fragment size distribution. Columns: fragment-size, total frequency, unique frequency
+
+ 
+#### Generate metrics specific to given genomic regions
 
 java -server -Xms4g -Xmx4g -cp Waltz.jar org.mskcc.juber.waltz.Waltz PileupMetrics mappinngQualityThreshold bam-file reference-fasta bed-file
+
+This produces 4 different files:
+-pileup.txt: per-position fragment count for different alleles. Columns: chr, position, ref, depth (including N's), fragment counts for A, C, G, T, insertions, deletions, soft clip start, soft clip end, hard clip start, hard clip end
+
+-pileup-without-duplicates.txt: similar to above but only unique fragments are counted
+
+-intervals.txt: stats per genomic interval. Columns: chr, start, end, interval name, interval length, peak coverage, average coverage, GC fraction, number of fragments mapped
+
+-intervals-without-duplicates.txt: similar to above but only unique fragments are considered
+ 
 
 
 ### 2. Genotyping

@@ -34,7 +34,7 @@ public class CountReads
 	{
 		File bamFile = new File(args[0]);
 		int coverageThreshold = Integer.parseInt(args[1]);
-		File geneListFile = new File(args[2]);
+		File transcriptsFile = new File(args[2]);
 		File intervalsFile = new File(args[3]);
 
 		System.out.println("Scanning " + bamFile.getName());
@@ -55,7 +55,7 @@ public class CountReads
 				intervalsLabel);
 		// create a coveredRegions object
 		CoveredRegions coveredRegions = new CoveredRegions(bamFile.getName(),
-				coverageThreshold, geneListFile);
+				coverageThreshold, transcriptsFile);
 
 		// load intervals
 		List<Interval> intervals = Util.loadIntervals(intervalsFile);
