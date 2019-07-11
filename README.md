@@ -30,10 +30,10 @@ Java 1.8 or above is required.
 
 java -server -Xms4g -Xmx4g -cp Waltz.jar org.mskcc.juber.waltz.countreads.CountReads bam-file coverageThreshold canonical-transcripts-bed-file intervals-bed-file
 
-where 
-coverageThreshold is the average coverage above which a contiguous region should be considered covered (suggested value: 5)
-canonical-transcripts-bed-file is the bed file with all exons in across the genomes (included above)
-intervals-bed-file is the bed file of chosen genomic intervals
+where  
+coverageThreshold is the average coverage above which a contiguous region should be considered covered (suggested value: 5)  
+canonical-transcripts-bed-file is the bed file with all exons in across the genomes (included above)  
+intervals-bed-file is the bed file of chosen genomic intervals  
 
 
 This produces 3 files:  
@@ -74,7 +74,18 @@ fragment-sizes.txt: fragment size distributions for all samples
 
 ### 2. Genotyping
 
-java -server -Xms4g -Xmx4g -cp Waltz.jar org.mskcc.juber.waltz.Waltz Genotyping mappinngQualityThreshold bam-file reference-fasta bed-file mutations-maf-file
+java -server -Xms4g -Xmx4g -cp Waltz.jar org.mskcc.juber.waltz.Waltz Genotyping mappinngQualityThreshold bam-file reference-fasta intervals-bed-file mutations-maf-file
+
+where
+mutations-maf-file is a file in maf format specifying the mutations to be profiled in the given bam. Required fields are Chromosome, Start_Position, Variant_Type, Reference_Allele and Tumor_Seq_Allele2
+
+This will produce a -genotypes.maf file with 4 addtional columns at the end: Waltz_total_t_depth, Waltz_total_t_alt_count, Waltz_MD_t_depth and Waltz_MD_t_alt_count. All sample-specific columns will be made empty while all the mutation-specific information will be retained. Tumor_Sample_Barcode will contain the name of the sample being genotyped.
+
+#### Collect genotypes across multiple samples
+
+Run aggregate-genotypes.sh script in the folder where the -genotypes.maf files are present to collect genotyping information across multiple samples. This output is a genotypes.maf file. 
+
+
 
 
 
