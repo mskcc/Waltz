@@ -4,8 +4,7 @@ A fast, efficient bam pileup and application modules based on it, like coverage 
 
 This software was developed at the Innovation Lab, Center for Molecular Oncology, Memorial Sloan Kettering Cancer Center.
 <br/>
-<br/>
-<br/>
+
 
 Waltz has 2 main modules:  
 1. **Bam metrics**: Generate various useful metrics for a given bam file
@@ -83,7 +82,9 @@ This will produce a -genotypes.maf file with 4 addtional columns at the end: Wal
 
 #### Collect genotypes across multiple samples
 
-Run aggregate-genotypes.sh script in the folder where the -genotypes.maf files are present to collect genotyping information across multiple samples. This output is a genotypes.maf file. 
+Run aggregate-genotypes.sh script in the folder where the -genotypes.maf files are present to collect genotyping information across multiple samples. The output is a genotypes.maf file. 
+
+
 
 
 
