@@ -269,12 +269,6 @@ public class WaltzWorker
 			iterator.close();
 
 			pileup.giveViewTo(processor);
-
-			// if(interval.getName().equals("exon_PTEN_5.1_2_A"))
-			// {
-			// int a = 5;
-			// }
-
 			processor.processRegion(output);
 		}
 

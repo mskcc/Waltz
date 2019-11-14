@@ -26,6 +26,9 @@
  */
 package org.mskcc.juber.waltz.pileup;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * @author Juber Patel
  * 
@@ -49,7 +52,6 @@ public class PositionPileup
 	// read counts supporting various base calls
 	// counts for A, C, G, T and N for this position
 	private int[] baseCounts;
-	private int[] baseQualities;
 	private int softClips;
 	private int softClipStarts;
 	private int softClipStartQuality;
@@ -67,6 +69,8 @@ public class PositionPileup
 	private int mateUnmapped;
 	private int mateDistanceUnexpected;
 	private int readSplitPoint;
+	private Map<String, Character> bases;
+	private static char nChar = 'N';
 
 	public PositionPileup()
 	{
@@ -74,7 +78,7 @@ public class PositionPileup
 		// this value should never be seen anywhere
 		refBase = '?';
 		baseCounts = new int[5];
-		baseQualities = new int[5];
+		bases = new HashMap<String, Character>();
 	}
 
 	public void reset(byte refBase)
@@ -83,9 +87,9 @@ public class PositionPileup
 		for (int i = 0; i < baseCounts.length; i++)
 		{
 			baseCounts[i] = 0;
-			baseQualities[i] = 0;
-
 		}
+
+		bases.clear();
 
 		softClips = 0;
 		softClipStarts = 0;
@@ -106,7 +110,57 @@ public class PositionPileup
 		readSplitPoint = 0;
 	}
 
-	public void addBase(byte base)
+	public void addBase(char base, String fragmentName)
+	{
+		Character old = bases.get(fragmentName);
+		if (old == null)
+		{
+			bases.put(fragmentName, base);
+		}
+		else if (Character.toUpperCase(old) != Character.toUpperCase(base))
+		{
+			bases.put(fragmentName, nChar);
+		}
+	}
+
+	/**
+	 * compute per base count from fragment->base map
+	 */
+	public void computeCounts()
+	{
+		for (int i = 0; i < baseCounts.length; i++)
+		{
+			baseCounts[i] = 0;
+		}
+
+		for (String fragment : bases.keySet())
+		{
+			char base = bases.get(fragment);
+
+			if (base == 'A' || base == 'a')
+			{
+				baseCounts[0]++;
+			}
+			else if (base == 'C' || base == 'c')
+			{
+				baseCounts[1]++;
+			}
+			else if (base == 'G' || base == 'g')
+			{
+				baseCounts[2]++;
+			}
+			else if (base == 'T' || base == 't')
+			{
+				baseCounts[3]++;
+			}
+			else
+			{
+				baseCounts[4]++;
+			}
+		}
+	}
+
+	private void addBaseOld(byte base, String fragmentName)
 	{
 		if (base == 'A' || base == 'a')
 		{

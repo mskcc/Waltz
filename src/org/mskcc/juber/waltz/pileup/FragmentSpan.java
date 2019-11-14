@@ -112,8 +112,10 @@ public class FragmentSpan
 	 * @param end
 	 * @return
 	 */
-	public boolean spans(String contig, int start, int end)
+	public int spanningReads(String contig, int start, int end)
 	{
+		int spanningReads = 0;
+
 		for (ContineousSpan recordSpan : recordSpans)
 		{
 			// not on same contig, don't bother
@@ -125,10 +127,10 @@ public class FragmentSpan
 			// fully contained in current record span
 			if (start >= recordSpan.start && end <= recordSpan.end)
 			{
-				return true;
+				spanningReads++;
 			}
 		}
 
-		return false;
+		return spanningReads;
 	}
 }

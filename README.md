@@ -101,3 +101,6 @@ Run aggregate-genotypes.sh script in the folder where the -genotypes.maf files a
 
 
 
+
+
+

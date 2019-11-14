@@ -426,7 +426,7 @@ public class GenotypingProcessor implements PileupProcessor
 			// record spanning fragments
 			for (FragmentSpan fragmentSpan : pileup.fragmentSpans.values())
 			{
-				if (fragmentSpan.spans(span.contig, span.start, span.end))
+				if (fragmentSpan.spanningReads(span.contig, span.start, span.end))
 				{
 					genotype.totalCoverage++;
 
@@ -836,7 +836,7 @@ public class GenotypingProcessor implements PileupProcessor
 		// record spanning fragments
 		for (FragmentSpan fragmentSpan : pileup.fragmentSpans.values())
 		{
-			if (fragmentSpan.spans(genotypeID.contig, genotypeID.position,
+			if (fragmentSpan.spanningReads(genotypeID.contig, genotypeID.position,
 					genotypeID.endPosition))
 			{
 				genotype.totalCoverage++;
@@ -893,7 +893,7 @@ public class GenotypingProcessor implements PileupProcessor
 		// record spanning fragments
 		for (FragmentSpan fragmentSpan : pileup.fragmentSpans.values())
 		{
-			if (fragmentSpan.spans(genotypeID.contig, genotypeID.position + 1,
+			if (fragmentSpan.spanningReads(genotypeID.contig, genotypeID.position + 1,
 					genotypeID.position + genotypeID.alt.length - 1))
 			{
 				genotype.totalCoverage++;
