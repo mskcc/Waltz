@@ -65,11 +65,14 @@ public class WaltzPileupMetricsTest
 
 		String intervalsBedFile = "bedFiles/pan-cancer-panel.bed";
 		// String intervalsBedFile = "bedFiles/Sarath-10-genes.bed";
-		
+
+		String readPairMismatchPolicy = "0";
+
 		String moduleArgument = null;
 
 		Waltz.main(new String[] { module, minimumMappingQuality, bamFile,
-				referenceFasta, intervalsBedFile, moduleArgument });
+				referenceFasta, intervalsBedFile, readPairMismatchPolicy,
+				moduleArgument });
 
 	}
 }

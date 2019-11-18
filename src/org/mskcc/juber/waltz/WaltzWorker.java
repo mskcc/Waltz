@@ -66,11 +66,13 @@ public class WaltzWorker
 	private WaltzOutput output;
 	private IndexedFastaSequenceFile referenceFasta;
 	private AlignmentFilter filter;
+	private int readPairMismatchPolicy;
 
 	public WaltzWorker(String module, int minimumMappingQuality, String bamFile,
 			String bamIndexFile, File referenceFastaFile,
-			IntervalList intervalList, String moduleArgument, int[] insertSize,
-			WaltzOutput output) throws IOException
+			IntervalList intervalList, int readPairMismatchPolicy,
+			String moduleArgument, int[] insertSize, WaltzOutput output)
+			throws IOException
 	{
 		SamReaderFactory factory = SamReaderFactory.makeDefault();
 		SamInputResource resource = SamInputResource.of(new File(bamFile))
@@ -81,6 +83,7 @@ public class WaltzWorker
 		this.insertMax = insertSize[1];
 		this.output = output;
 		this.referenceFasta = new IndexedFastaSequenceFile(referenceFastaFile);
+		this.readPairMismatchPolicy = readPairMismatchPolicy;
 		setFilter(minimumMappingQuality);
 		setProcessor(module, moduleArgument);
 	}
@@ -228,7 +231,7 @@ public class WaltzWorker
 		}
 
 		RegionPileup pileup = new RegionPileup(referenceFasta,
-				maxIntervalLength, insertMin, insertMax);
+				maxIntervalLength, insertMin, insertMax, readPairMismatchPolicy);
 
 		// for each interval
 		for (Interval interval : intervalList)

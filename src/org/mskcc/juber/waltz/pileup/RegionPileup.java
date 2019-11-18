@@ -58,6 +58,7 @@ import htsjdk.samtools.util.Interval;
 public class RegionPileup
 {
 	private IndexedFastaSequenceFile referenceFasta;
+	private int readPairMismatchPolicy;
 	private byte[] referenceBases;
 	private Interval interval;
 	// the last valid position in the current pileup
@@ -88,11 +89,13 @@ public class RegionPileup
 	private Map<GenotypeID, List<String>> genotypes;
 
 	public RegionPileup(IndexedFastaSequenceFile referenceFasta,
-			int maxIntervalLength, int insertMin, int insertMax)
+			int maxIntervalLength, int insertMin, int insertMax,
+			int readPairMismatchPolicy)
 	{
 		this.referenceFasta = referenceFasta;
 		this.insertMin = insertMin;
 		this.insertMax = insertMax;
+		this.readPairMismatchPolicy = readPairMismatchPolicy;
 		this.positions = new PositionPileup[maxIntervalLength];
 		this.positionsWithoutDuplicates = new PositionPileup[maxIntervalLength];
 
@@ -216,12 +219,12 @@ public class RegionPileup
 
 						positions[pileupIndex].addBase(
 								(char) readBases[readIndex],
-								record.getReadName());
+								record.getReadName(), readPairMismatchPolicy);
 						if (!duplicate)
 						{
 							positionsWithoutDuplicates[pileupIndex].addBase(
 									(char) readBases[readIndex],
-									record.getReadName());
+									record.getReadName(), readPairMismatchPolicy);
 						}
 					}
 
@@ -566,8 +569,8 @@ public class RegionPileup
 	}
 
 	/**
-	 * use fragmentSpans and genotypes to come up with the right numbers for
-	 * genotypes
+	 * use fragmentSpans and genotypes to come up with the right counts for
+	 * genotypes and replace old genotypes map with the new one
 	 * 
 	 * 
 	 * @return
@@ -592,13 +595,15 @@ public class RegionPileup
 				freqs.adjustOrPutValue(name, 1, 1);
 			}
 
+			// check if expected number of reads for the genotype+fragment pair
+			// matches the actual number
 			for (String name : freqs.keySet())
 			{
 				int expected = fragmentSpans.get(name).spanningReads(
 						genotypeID.contig, genotypeID.position - 1,
 						genotypeID.endPosition + 1);
 
-				if (expected == freqs.get(name))
+				if (readPairMismatchPolicy != 0 || expected == freqs.get(name))
 				{
 					finalized.add(name);
 				}
@@ -609,7 +614,7 @@ public class RegionPileup
 				g.put(genotypeID, finalized);
 			}
 		}
-		
+
 		return g;
 	}
 

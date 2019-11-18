@@ -74,10 +74,16 @@ public class Waltz
 		final String bamFile = args[2];
 		final File referenceFastaFile = new File(args[3]);
 		final File intervalsBedFile = new File(args[4]);
-		String moduleArgument = null;
-		if (args.length == 6)
+		int readPairMismatchPolicy = 0;
+		if (args.length >= 6)
 		{
-			moduleArgument = args[5];
+			readPairMismatchPolicy = Integer.parseInt(args[5]);
+		}
+
+		String moduleArgument = null;
+		if (args.length >= 7)
+		{
+			moduleArgument = args[6];
 		}
 
 		// must not see args[] beyond this point
@@ -107,7 +113,8 @@ public class Waltz
 		IntervalList intervalList = inputIntervalLists[0];
 		WaltzWorker worker = new WaltzWorker(module, minimumMappingQuality,
 				bamFile, bamIndexFile, referenceFastaFile, intervalList,
-				moduleArgument, dummyInsertSize, output);
+				readPairMismatchPolicy, moduleArgument, dummyInsertSize,
+				output);
 
 		// execute the worker
 		worker.process();

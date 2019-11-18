@@ -110,16 +110,34 @@ public class PositionPileup
 		readSplitPoint = 0;
 	}
 
-	public void addBase(char base, String fragmentName)
+	public void addBase(char base, String fragmentName,
+			int readPairMismatchPolicy)
 	{
 		Character old = bases.get(fragmentName);
+		// first read for this position
 		if (old == null)
 		{
 			bases.put(fragmentName, base);
 		}
-		else if (Character.toUpperCase(old) != Character.toUpperCase(base))
+		else if (Character.toUpperCase(old) == Character.toUpperCase(base))
 		{
+			// they match. Nothing to be done
+		}
+		else if (readPairMismatchPolicy == 0)
+		{
+			// make it N in case of mismatch and policy=0
 			bases.put(fragmentName, nChar);
+		}
+		else if ((old != (char) refBase && old != nChar) || base == nChar)
+		{
+			// bases mismatch and policy is to preserve alt. Order of
+			// preference: alt>ref>N
+			// nothing to be done if old is alt or new is N.
+		}
+		else
+		{
+			// else put in new
+			bases.put(fragmentName, base);
 		}
 	}
 
