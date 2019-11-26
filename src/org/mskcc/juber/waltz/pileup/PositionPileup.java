@@ -69,8 +69,8 @@ public class PositionPileup
 	private int mateUnmapped;
 	private int mateDistanceUnexpected;
 	private int readSplitPoint;
-	private Map<String, Character> bases;
-	private static char nChar = 'N';
+	private Map<String, Character> fragmentBases;
+	public static char nChar = 'N';
 
 	public PositionPileup()
 	{
@@ -78,7 +78,7 @@ public class PositionPileup
 		// this value should never be seen anywhere
 		refBase = '?';
 		baseCounts = new int[5];
-		bases = new HashMap<String, Character>();
+		fragmentBases = new HashMap<String, Character>();
 	}
 
 	public void reset(byte refBase)
@@ -89,7 +89,7 @@ public class PositionPileup
 			baseCounts[i] = 0;
 		}
 
-		bases.clear();
+		fragmentBases.clear();
 
 		softClips = 0;
 		softClipStarts = 0;
@@ -113,11 +113,11 @@ public class PositionPileup
 	public void addBase(char base, String fragmentName,
 			int readPairMismatchPolicy)
 	{
-		Character old = bases.get(fragmentName);
+		Character old = fragmentBases.get(fragmentName);
 		// first read for this position
 		if (old == null)
 		{
-			bases.put(fragmentName, base);
+			fragmentBases.put(fragmentName, base);
 		}
 		else if (Character.toUpperCase(old) == Character.toUpperCase(base))
 		{
@@ -126,7 +126,7 @@ public class PositionPileup
 		else if (readPairMismatchPolicy == 0)
 		{
 			// make it N in case of mismatch and policy=0
-			bases.put(fragmentName, nChar);
+			fragmentBases.put(fragmentName, nChar);
 		}
 		else if ((old != (char) refBase && old != nChar) || base == nChar)
 		{
@@ -137,7 +137,7 @@ public class PositionPileup
 		else
 		{
 			// else put in new
-			bases.put(fragmentName, base);
+			fragmentBases.put(fragmentName, base);
 		}
 	}
 
@@ -151,9 +151,11 @@ public class PositionPileup
 			baseCounts[i] = 0;
 		}
 
-		for (String fragment : bases.keySet())
+		deletions = 0;
+
+		for (String fragment : fragmentBases.keySet())
 		{
-			char base = bases.get(fragment);
+			char base = fragmentBases.get(fragment);
 
 			if (base == 'A' || base == 'a')
 			{
@@ -170,6 +172,10 @@ public class PositionPileup
 			else if (base == 'T' || base == 't')
 			{
 				baseCounts[3]++;
+			}
+			else if (base == 'D')
+			{
+				deletions++;
 			}
 			else
 			{
@@ -241,12 +247,9 @@ public class PositionPileup
 				+ deletions;
 	}
 
-	public void addDeletion(boolean mateUnmapped,
-			boolean mateDistanceUnexpected)
+	public Map<String, Character> getFragmentBases()
 	{
-		deletions++;
-
-		updateMateInfo(mateUnmapped, mateDistanceUnexpected);
+		return fragmentBases;
 	}
 
 	public void addInsertion(int length)

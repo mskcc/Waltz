@@ -26,6 +26,8 @@
  */
 package org.mskcc.juber.waltz.pileup;
 
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -107,7 +109,106 @@ public class RegionPileupView
 			return false;
 		}
 
+		pileupIndex = getIndex(genotypeID.contig, genotypeID.endPosition);
+
+		if (pileupIndex == -1)
+		{
+			return false;
+		}
+
 		return true;
+	}
+
+	/**
+	 * go through the position pileups and find the fragments that have valid
+	 * coverage (i.e. no N's) over the entire given span
+	 * 
+	 * 
+	 * @param span
+	 * @return
+	 */
+	public Set<String> getValidSpanningFragments(GenotypeID genotypeID)
+	{
+		Set<String> spanningFragments = new HashSet<String>();
+
+		int startIndex = getIndex(genotypeID.contig, genotypeID.position);
+		int endIndex = getIndex(genotypeID.contig, genotypeID.endPosition);
+
+		if (startIndex == -1 || endIndex == -1)
+		{
+			return spanningFragments;
+		}
+
+		// make the fragment set for the first position
+		Map<String, Character> bases = positions[startIndex].getFragmentBases();
+		for (String fragment : bases.keySet())
+		{
+			Character base = bases.get(fragment);
+
+			// valid base
+			if (base != null && base != PositionPileup.nChar)
+			{
+				spanningFragments.add(fragment);
+			}
+		}
+
+		// remove those not present or not valid for other positions
+		for (int i = startIndex + 1; i <= endIndex; i++)
+		{
+			// nothing to remove, short circuit
+			if (spanningFragments.isEmpty())
+			{
+				return spanningFragments;
+			}
+
+			bases = positions[i].getFragmentBases();
+			Iterator<String> iterator = spanningFragments.iterator();
+			while (iterator.hasNext())
+			{
+				String fragment = iterator.next();
+				Character base = bases.get(fragment);
+				if (base == null || base == PositionPileup.nChar)
+				{
+					iterator.remove();
+				}
+			}
+		}
+
+		return spanningFragments;
+
+	}
+
+	public Set<String> getValidSpanningFragments(Set<GenotypeID> genotypeIDs)
+	{
+		Set<String> spanningFragments = null;
+		for (GenotypeID genotypeID : genotypeIDs)
+		{
+			// first genotypeID
+			if (spanningFragments == null)
+			{
+				spanningFragments = getValidSpanningFragments(genotypeID);
+			}
+			else if (spanningFragments.isEmpty())
+			{
+				// nothing to remove, return
+				return spanningFragments;
+			}
+			else
+			{
+				Set<String> next = getValidSpanningFragments(genotypeID);
+				// do intersection
+				spanningFragments.retainAll(next);
+			}
+		}
+
+		if (spanningFragments == null)
+		{
+			return new HashSet<String>();
+		}
+		else
+		{
+			return spanningFragments;
+		}
 	}
 
 }

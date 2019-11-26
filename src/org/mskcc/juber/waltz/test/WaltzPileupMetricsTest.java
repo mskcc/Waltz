@@ -54,17 +54,18 @@ public class WaltzPileupMetricsTest
 		// String module = "SignatureFinding";
 
 		// String filterType = "BasicFilter";
-		String minimumMappingQuality = "1";
+		String minimumMappingQuality = "20";
 
-		String bamFile = "bamFiles/"
-				+ "C-WUC3WV-N002-d_cl_aln_srt_MD_IR_FX_BR.bam";
+		String bamFile = "/Users/patelj1/workspace/Waltz/bamFiles/Hapmap-ctrl-1_S2_001_cl_aln_srt_MD_IR_FX_BR.bam";
+
+		// String bamFile = "bamFiles/C-WUC3WV-N002-d_cl_aln_srt_MD_IR_FX_BR.bam";
 
 		// String referenceFasta =
 		// "/Users/patelj1/resources/hg19-ucsc/human_hg19.fa";
 		String referenceFasta = "/Users/patelj1/resources/hg19-ncbi/Homo_sapiens_assembly19.fasta";
 
-		String intervalsBedFile = "bedFiles/pan-cancer-panel.bed";
-		// String intervalsBedFile = "bedFiles/Sarath-10-genes.bed";
+		//String intervalsBedFile = "bedFiles/MSK-ACCESS-V1_0-A.bed";
+		String intervalsBedFile = "bedFiles/test.bed";
 
 		String readPairMismatchPolicy = "0";
 

@@ -49,7 +49,6 @@ public class WaltzGenotypingTest
 	{
 		// TODO a bit more accuracy needed. We are probably missing some reads.
 
-		// String module = "Metrics";
 		String module = "Genotyping";
 
 		// String module = "SignatureFinding";
@@ -68,11 +67,14 @@ public class WaltzGenotypingTest
 		String intervalsBedFile = "/Users/patelj1/workspace/Waltz/bedFiles/MSK-ACCESS-V1_0-A.bed";
 		// String intervalsBedFile = "bedFiles/multibase-substitution-test.bed";
 
+		String readPairMismatchPolicy = "0";
+
 		String moduleArgument = "/Users/patelj1/workspace/Waltz/Genotyping/mutationsFiles/test.maf";
 		// String moduleArgument =
 		// "/Users/patelj1/workspace/Waltz/Genotyping/mutationsFiles/breast-carcinoma-8-gene-hotspots.txt";
 
 		Waltz.main(new String[] { module, minimumMappingQuality, bamFile,
-				referenceFasta, intervalsBedFile, moduleArgument });
+				referenceFasta, intervalsBedFile, readPairMismatchPolicy,
+				moduleArgument });
 	}
 }

@@ -421,30 +421,47 @@ public class GenotypingProcessor implements PileupProcessor
 				genotype = new Genotype(name.toString());
 			}
 
-			ContineousSpan span = computeSpan(s);
-
-			// record spanning fragments
-			for (FragmentSpan fragmentSpan : pileup.fragmentSpans.values())
+			// record spanning fragments, the new way
+			Set<GenotypeID> genotypeIDs = new HashSet<GenotypeID>();
+			for (GenotypeIDWithMafLine id : s)
 			{
-				if (fragmentSpan.spanningReads(span.contig, span.start,
-						span.end) > 0)
-				{
-					genotype.totalCoverage++;
+				genotypeIDs.add(id.genotypeID);
+			}
 
-					if (!fragmentSpan.isDuplicate())
-					{
-						genotype.uniqueCoverage++;
-					}
+			Set<String> spanningFragments = pileup
+					.getValidSpanningFragments(genotypeIDs);
+			genotype.totalCoverage = spanningFragments.size();
+			for (String fragment : spanningFragments)
+			{
+				if (!pileup.fragmentSpans.get(fragment).isDuplicate())
+				{
+					genotype.uniqueCoverage++;
 				}
 			}
 
-			Set<String> fragments = powerSetFragments.get(s);
+			// record spanning fragments
+			// ContineousSpan span = computeSpan(s);
+			// for (FragmentSpan fragmentSpan : pileup.fragmentSpans.values())
+			// {
+			// if (fragmentSpan.spanningReads(span.contig, span.start,
+			// span.end) > 0)
+			// {
+			// genotype.totalCoverage++;
+			//
+			// if (!fragmentSpan.isDuplicate())
+			// {
+			// genotype.uniqueCoverage++;
+			// }
+			// }
+			// }
+
+			Set<String> supportingFragments = powerSetFragments.get(s);
 
 			// record supporting fragments
-			if (fragments != null)
+			if (supportingFragments != null)
 			{
-				genotype.totalSupportingCoverage = fragments.size();
-				for (String fragment : fragments)
+				genotype.totalSupportingCoverage = supportingFragments.size();
+				for (String fragment : supportingFragments)
 				{
 					if (!pileup.fragmentSpans.get(fragment).isDuplicate())
 					{

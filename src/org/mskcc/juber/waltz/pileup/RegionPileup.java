@@ -185,6 +185,7 @@ public class RegionPileup
 		// going through it.
 		readIndex = 0;
 		int operatorLength = 0;
+		String fragmentName = record.getReadName();
 		Cigar cigar = record.getCigar();
 		List<CigarElement> elements = cigar.getCigarElements();
 
@@ -218,13 +219,13 @@ public class RegionPileup
 								readBases[readIndex]);
 
 						positions[pileupIndex].addBase(
-								(char) readBases[readIndex],
-								record.getReadName(), readPairMismatchPolicy);
+								(char) readBases[readIndex], fragmentName,
+								readPairMismatchPolicy);
 						if (!duplicate)
 						{
 							positionsWithoutDuplicates[pileupIndex].addBase(
-									(char) readBases[readIndex],
-									record.getReadName(), readPairMismatchPolicy);
+									(char) readBases[readIndex], fragmentName,
+									readPairMismatchPolicy);
 						}
 					}
 
@@ -235,8 +236,7 @@ public class RegionPileup
 
 				if (matchMismatchRecord != null)
 				{
-					matchMismatchRecord
-							.recordSubstitutions(record.getReadName());
+					matchMismatchRecord.recordSubstitutions(fragmentName);
 				}
 			}
 			else if (operator.equals(CigarOperator.INSERTION))
@@ -268,7 +268,7 @@ public class RegionPileup
 							GenotypeEventType.INSERTION, interval.getContig(),
 							precedingGenomicPosition, ref, alt);
 					// add
-					addGenotype(genotypeID, record.getReadName());
+					addGenotype(genotypeID, fragmentName);
 				}
 
 				// increment readIndex but not PileupIndex
@@ -296,7 +296,7 @@ public class RegionPileup
 							GenotypeEventType.DELETION, interval.getContig(),
 							precedingGenomicPosition, ref, alt);
 					// add
-					addGenotype(genotypeID, record.getReadName());
+					addGenotype(genotypeID, fragmentName);
 				}
 
 				// add deletions to the pileup
@@ -305,12 +305,14 @@ public class RegionPileup
 					if (pileupIndex >= validPileupStart
 							&& pileupIndex <= lastValidPositionIndex)
 					{
-						positions[pileupIndex].addDeletion(mateUnmapped,
-								mateDistanceUnexpected);
+						positions[pileupIndex].addBase('D',
+								fragmentName, readPairMismatchPolicy);
+
 						if (!duplicate)
 						{
-							positionsWithoutDuplicates[pileupIndex].addDeletion(
-									mateUnmapped, mateDistanceUnexpected);
+							positionsWithoutDuplicates[pileupIndex].addBase('D',
+									fragmentName,
+									readPairMismatchPolicy);
 						}
 					}
 
@@ -600,8 +602,8 @@ public class RegionPileup
 			for (String name : freqs.keySet())
 			{
 				int expected = fragmentSpans.get(name).spanningReads(
-						genotypeID.contig, genotypeID.position - 1,
-						genotypeID.endPosition + 1);
+						genotypeID.contig, genotypeID.position,
+						genotypeID.endPosition);
 
 				if (readPairMismatchPolicy != 0 || expected == freqs.get(name))
 				{
