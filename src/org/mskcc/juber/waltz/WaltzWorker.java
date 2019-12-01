@@ -108,7 +108,7 @@ public class WaltzWorker
 					referenceFasta);
 			Set<Interval> genotypeIntervals = ((GenotypingProcessor) processor)
 					.getGenotypesAsIntervals();
-			adjustIntervalList(genotypeIntervals);
+			makeGenotypingIntervalList(genotypeIntervals);
 
 			// output.enableForMetrics();
 			output.enableForGenotypes(
@@ -130,57 +130,65 @@ public class WaltzWorker
 	}
 
 	/**
-	 * Adjust intervals list for genotyping. Remove intervals that do not
-	 * overlap with any of the mutations. Expand intervals appropriately that
-	 * partially overlap with a mutation.
+	 * make interval list for genotyping from the mutations to be genotyped.
 	 * 
 	 * @param genotypes
+	 * @return
 	 */
-	private void adjustIntervalList(Set<Interval> genotypeIntervals)
+	private void makeGenotypingIntervalList(Set<Interval> genotypeIntervals)
 	{
-		// pad 5 bases on each side of interval. This is to make sure splice
-		// sites are captured even when only exon boundaries are given.
-		intervalList = intervalList.padded(5, 5);
-		intervalList = intervalList.uniqued();
+		// intervals within this distance will be merged. This helps with
+		// finding composite genotypes.
+		int mergeDistance = 100;
 
-		// make new interval list that contains the parts of each interval that
-		// overlaps with all the mutations overlapping with that interval.
+		// make sure intervalList is empty
+		intervalList = new IntervalList(intervalList.getHeader());
+
+		// get the header from intervalList which is empty otherwise
 		IntervalList newIntervalList = new IntervalList(
 				intervalList.getHeader());
-
-		for (Interval interval : intervalList.getIntervals())
+		for (Interval genotypeInterval : genotypeIntervals)
 		{
-			IntervalList t = new IntervalList(intervalList.getHeader());
-
-			for (Interval genotypeInterval : genotypeIntervals)
-			{
-				if (interval.intersects(genotypeInterval))
-				{
-					t.add(genotypeInterval);
-				}
-			}
-
-			// no given mutation overlaps with current interval
-			if (t.size() == 0)
-			{
-				continue;
-			}
-
-			// create one spanning interval that spans all the genotypes
-			// overlapping with the current interval
-			t = t.sorted();
-			List<Interval> list = t.getIntervals();
-			String contig = list.get(0).getContig();
-			int start = list.get(0).getStart();
-			int end = list.get(list.size() - 1).getEnd();
-			Interval newInterval = new Interval(contig, start, end, false,
-					interval.getName());
-			newInterval = newInterval.pad(5, 5);
-			newIntervalList.add(newInterval);
+			newIntervalList.add(genotypeInterval);
 		}
 
-		// update interval list that will be used for processing
-		intervalList = newIntervalList;
+		// sort by start position
+		newIntervalList = newIntervalList.sorted();
+		List<Interval> sortedIntervals = newIntervalList.getIntervals();
+		String contig = sortedIntervals.get(0).getContig();
+		int start = sortedIntervals.get(0).getStart();
+		int end = sortedIntervals.get(0).getEnd();
+		String name = sortedIntervals.get(0).getName();
+
+		// find and merge intervals within mergeDistance
+		for (int i = 1; i < sortedIntervals.size(); i++)
+		{
+			Interval interval = sortedIntervals.get(i);
+
+			// merge
+			if (contig.equals(interval.getContig())
+					&& interval.getStart() - end < mergeDistance)
+			{
+				end = interval.getEnd() > end ? interval.getEnd() : end;
+				name = name + "+" + interval.getName();
+			}
+			else
+			{
+				// don't merge into current interval, start a new interval
+				// but first add the last merged interval to the list
+				intervalList.add(new Interval(contig, start, end, false, name));
+				contig = interval.getContig();
+				start = interval.getStart();
+				end = interval.getEnd();
+				name = interval.getName();
+			}
+		}
+
+		// add the last merged interval
+		intervalList.add(new Interval(contig, start, end, false, name));
+
+		// add some padding to each interval
+		intervalList = intervalList.padded(5, 5);
 	}
 
 	/**
@@ -231,7 +239,8 @@ public class WaltzWorker
 		}
 
 		RegionPileup pileup = new RegionPileup(referenceFasta,
-				maxIntervalLength, insertMin, insertMax, readPairMismatchPolicy);
+				maxIntervalLength, insertMin, insertMax,
+				readPairMismatchPolicy);
 
 		// for each interval
 		for (Interval interval : intervalList)

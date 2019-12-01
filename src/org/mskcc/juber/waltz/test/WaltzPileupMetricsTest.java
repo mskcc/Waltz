@@ -58,22 +58,20 @@ public class WaltzPileupMetricsTest
 
 		String bamFile = "/Users/patelj1/workspace/Waltz/bamFiles/Hapmap-ctrl-1_S2_001_cl_aln_srt_MD_IR_FX_BR.bam";
 
-		// String bamFile = "bamFiles/C-WUC3WV-N002-d_cl_aln_srt_MD_IR_FX_BR.bam";
+		// String bamFile =
+		// "bamFiles/C-WUC3WV-N002-d_cl_aln_srt_MD_IR_FX_BR.bam";
 
 		// String referenceFasta =
 		// "/Users/patelj1/resources/hg19-ucsc/human_hg19.fa";
 		String referenceFasta = "/Users/patelj1/resources/hg19-ncbi/Homo_sapiens_assembly19.fasta";
 
-		//String intervalsBedFile = "bedFiles/MSK-ACCESS-V1_0-A.bed";
+		// String intervalsBedFile = "bedFiles/MSK-ACCESS-V1_0-A.bed";
 		String intervalsBedFile = "bedFiles/test.bed";
 
 		String readPairMismatchPolicy = "0";
 
-		String moduleArgument = null;
-
 		Waltz.main(new String[] { module, minimumMappingQuality, bamFile,
-				referenceFasta, intervalsBedFile, readPairMismatchPolicy,
-				moduleArgument });
+				referenceFasta, intervalsBedFile, readPairMismatchPolicy });
 
 	}
 }

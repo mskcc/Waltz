@@ -75,7 +75,14 @@ public class GenotypingProcessor implements PileupProcessor
 		String line = null;
 		String[] parts = null;
 
-		processMafHeader(reader.readLine());
+		// ignore comment lines before header
+		line = reader.readLine();
+		while (line.startsWith("#"))
+		{
+			line = reader.readLine();
+		}
+
+		processMafHeader(line);
 
 		while ((line = reader.readLine()) != null)
 		{
@@ -173,13 +180,13 @@ public class GenotypingProcessor implements PileupProcessor
 	 * @return
 	 */
 	private GenotypeID makeGenotypeID(String[] parts)
-	{
-		String contig = parts[mafColumns.get("Chromosome")];
+	{	
+		String contig = parts[mafColumns.get("Chromosome")].trim();
 		int position = Integer
-				.parseInt(parts[mafColumns.get("Start_Position")]);
-		String refString = parts[mafColumns.get("Reference_Allele")];
-		String altString = parts[mafColumns.get("Tumor_Seq_Allele2")];
-		String eventTypeString = parts[mafColumns.get("Variant_Type")];
+				.parseInt(parts[mafColumns.get("Start_Position")].trim());
+		String refString = parts[mafColumns.get("Reference_Allele")].trim();
+		String altString = parts[mafColumns.get("Tumor_Seq_Allele2")].trim();
+		String eventTypeString = parts[mafColumns.get("Variant_Type")].trim();
 
 		// complex event
 		if ((eventTypeString.equals("INS") || eventTypeString.equals("DEL"))
@@ -398,6 +405,11 @@ public class GenotypingProcessor implements PileupProcessor
 			// a single, traditional genotype
 			if (s.size() == 1)
 			{
+				if(firstGenotypeIDWithMafLine.genotypeID.position == 55242483)
+				{
+					int a = 5;
+				}
+				
 				genotype = new Genotype(firstGenotypeIDWithMafLine.name,
 						firstGenotypeIDWithMafLine.genotypeID);
 			}
@@ -1076,6 +1088,7 @@ public class GenotypingProcessor implements PileupProcessor
 			{
 				return false;
 			}
+			
 			GenotypeIDWithMafLine other = (GenotypeIDWithMafLine) obj;
 
 			if (genotypeID == null)

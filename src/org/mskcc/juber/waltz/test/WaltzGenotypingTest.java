@@ -56,7 +56,9 @@ public class WaltzGenotypingTest
 		// String filterType = "BasicFilter";
 		String minimumMappingQuality = "20";
 
-		String bamFile = "/Users/patelj1/workspace/Waltz/bamFiles/Hapmap-ctrl-1_S2_001_cl_aln_srt_MD_IR_FX_BR.bam";
+		// String bamFile =
+		// "bamFiles/Hapmap-ctrl-1_S2_001_cl_aln_srt_MD_IR_FX_BR.bam";
+		String bamFile = "bamFiles/collapsed/AR5_cl_aln_srt_MD_IR_FX_BR__aln_srt_IR_FX-duplex.bam";
 		// String bamFile =
 		// "/Volumes/innovation/Innovation/projects/Juber/HiSeq/5500-DY/standard-bam-links/"
 		// +
@@ -69,12 +71,11 @@ public class WaltzGenotypingTest
 
 		String readPairMismatchPolicy = "0";
 
-		String moduleArgument = "/Users/patelj1/workspace/Waltz/Genotyping/mutationsFiles/test.maf";
+		String inputMafFile = "/Users/patelj1/workspace/Waltz/Genotyping/mutationsFiles/input.maf";
 		// String moduleArgument =
 		// "/Users/patelj1/workspace/Waltz/Genotyping/mutationsFiles/breast-carcinoma-8-gene-hotspots.txt";
 
 		Waltz.main(new String[] { module, minimumMappingQuality, bamFile,
-				referenceFasta, intervalsBedFile, readPairMismatchPolicy,
-				moduleArgument });
+				referenceFasta, inputMafFile, readPairMismatchPolicy });
 	}
 }

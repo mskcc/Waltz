@@ -69,21 +69,42 @@ public class Waltz
 		// TODO Should this program be made single threaded?? That would be more
 		// suitable for cluster run and it will also resolve some design issues.
 
-		final String module = args[0];
-		final int minimumMappingQuality = Integer.parseInt(args[1]);
-		final String bamFile = args[2];
-		final File referenceFastaFile = new File(args[3]);
-		final File intervalsBedFile = new File(args[4]);
+		String module = null;
+		int minimumMappingQuality = 20;
+		String bamFile = null;
+		File referenceFastaFile = null;
+		File intervalsBedFile = null;
 		int readPairMismatchPolicy = 0;
-		if (args.length >= 6)
-		{
-			readPairMismatchPolicy = Integer.parseInt(args[5]);
-		}
+		String inputMafFile = null;
 
-		String moduleArgument = null;
-		if (args.length >= 7)
+		// read module and its arguments
+		module = args[0];
+		if (module.equals("PileupMetrics"))
 		{
-			moduleArgument = args[6];
+			minimumMappingQuality = Integer.parseInt(args[1]);
+			bamFile = args[2];
+			referenceFastaFile = new File(args[3]);
+			intervalsBedFile = new File(args[4]);
+			if (args.length == 6)
+			{
+				readPairMismatchPolicy = Integer.parseInt(args[5]);
+			}
+		}
+		else if (module.equals("Genotyping"))
+		{
+			minimumMappingQuality = Integer.parseInt(args[1]);
+			bamFile = args[2];
+			referenceFastaFile = new File(args[3]);
+			inputMafFile = args[4];
+			if (args.length == 6)
+			{
+				readPairMismatchPolicy = Integer.parseInt(args[5]);
+			}
+		}
+		else
+		{
+			System.out.println("Unsupported module: " + module);
+			System.exit(0);
 		}
 
 		// must not see args[] beyond this point
@@ -102,19 +123,28 @@ public class Waltz
 		int[] dummyInsertSize = estimateInsertSize(reader, 99.0);
 		reader.close();
 
-		// IntervalList[] inputIntervalLists = makeIntervalLists(chunkSize,
-		// numberOfThreads, header);
-		IntervalList[] inputIntervalLists = makeIntervalLists(intervalsBedFile,
-				1, header);
+		IntervalList intervalList = null;
+
+		if (module.equals("PileupMetrics"))
+		{
+			IntervalList[] inputIntervalLists = makeIntervalLists(
+					intervalsBedFile, 1, header);
+			intervalList = inputIntervalLists[0];
+		}
+		else if (module.equals("Genotyping"))
+		{
+			// genotyping intervals will be decided by mutations to be
+			// genotyped. Only add header
+			intervalList = new IntervalList(header);
+		}
+
 		WaltzOutput output = new WaltzOutput(sampleName);
 
 		long start = System.currentTimeMillis();
 
-		IntervalList intervalList = inputIntervalLists[0];
 		WaltzWorker worker = new WaltzWorker(module, minimumMappingQuality,
 				bamFile, bamIndexFile, referenceFastaFile, intervalList,
-				readPairMismatchPolicy, moduleArgument, dummyInsertSize,
-				output);
+				readPairMismatchPolicy, inputMafFile, dummyInsertSize, output);
 
 		// execute the worker
 		worker.process();
