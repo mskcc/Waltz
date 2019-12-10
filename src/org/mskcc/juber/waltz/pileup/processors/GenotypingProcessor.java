@@ -44,8 +44,8 @@ import org.mskcc.juber.genotype.Genotype;
 import org.mskcc.juber.genotype.GenotypeEventType;
 import org.mskcc.juber.genotype.GenotypeID;
 import org.mskcc.juber.waltz.WaltzOutput;
-import org.mskcc.juber.waltz.pileup.ContineousSpan;
-import org.mskcc.juber.waltz.pileup.FragmentSpan;
+import org.mskcc.juber.waltz.pileup.MappedRead;
+import org.mskcc.juber.waltz.pileup.Fragment;
 import org.mskcc.juber.waltz.pileup.RegionPileupView;
 
 import com.google.common.collect.Sets;
@@ -180,7 +180,7 @@ public class GenotypingProcessor implements PileupProcessor
 	 * @return
 	 */
 	private GenotypeID makeGenotypeID(String[] parts)
-	{	
+	{
 		String contig = parts[mafColumns.get("Chromosome")].trim();
 		int position = Integer
 				.parseInt(parts[mafColumns.get("Start_Position")].trim());
@@ -405,11 +405,6 @@ public class GenotypingProcessor implements PileupProcessor
 			// a single, traditional genotype
 			if (s.size() == 1)
 			{
-				if(firstGenotypeIDWithMafLine.genotypeID.position == 55242483)
-				{
-					int a = 5;
-				}
-				
 				genotype = new Genotype(firstGenotypeIDWithMafLine.name,
 						firstGenotypeIDWithMafLine.genotypeID);
 			}
@@ -562,15 +557,15 @@ public class GenotypingProcessor implements PileupProcessor
 			Set<String> fragments = null;
 			// MNV needs a bit of special treatment since only constituent SNVs
 			// are stored in the pileup
-			if (genotypeIDWithName.genotypeID.type == GenotypeEventType.MNV)
-			{
-				fragments = getMNVSupportingFragments(
-						genotypeIDWithName.genotypeID);
-			}
-			else
-			{
-				fragments = pileup.genotypes.get(genotypeIDWithName.genotypeID);
-			}
+			// if (genotypeIDWithName.genotypeID.type == GenotypeEventType.MNV)
+			// {
+			// fragments = getMNVSupportingFragments(
+			// genotypeIDWithName.genotypeID);
+			// }
+			// else
+			// {
+			fragments = pileup.genotypes.get(genotypeIDWithName.genotypeID);
+			// }
 
 			if (fragments == null)
 			{
@@ -738,7 +733,7 @@ public class GenotypingProcessor implements PileupProcessor
 	 * @param s
 	 * @return
 	 */
-	private ContineousSpan computeSpan(Set<GenotypeIDWithMafLine> s)
+	private MappedRead computeSpan(Set<GenotypeIDWithMafLine> s)
 	{
 		String contig = null;
 		int start = 0;
@@ -778,7 +773,7 @@ public class GenotypingProcessor implements PileupProcessor
 			}
 		}
 
-		return new ContineousSpan(contig, start, end);
+		return new MappedRead(contig, start, end);
 
 	}
 
@@ -839,141 +834,6 @@ public class GenotypingProcessor implements PileupProcessor
 				.getCoverage();
 		genotype.uniqueSupportingCoverage = pileup.positionsWithoutDuplicates[pileupIndex]
 				.getCount(deletionBase);
-
-		return genotype.toString();
-	}
-
-	private String processGenotype(GenotypeID genotypeID, String genotypeName)
-	{
-		Genotype genotype = new Genotype(genotypeName, genotypeID);
-
-		// find the fragments supporting genotype
-		Set<String> fragments = pileup.genotypes.get(genotypeID);
-
-		// record supporting fragments
-		if (fragments != null)
-		{
-			genotype.totalSupportingCoverage = fragments.size();
-			for (String fragment : fragments)
-			{
-				if (!pileup.fragmentSpans.get(fragment).isDuplicate())
-				{
-					genotype.uniqueSupportingCoverage++;
-				}
-			}
-		}
-
-		// record spanning fragments
-		for (FragmentSpan fragmentSpan : pileup.fragmentSpans.values())
-		{
-			if (fragmentSpan.spanningReads(genotypeID.contig,
-					genotypeID.position, genotypeID.endPosition) > 0)
-			{
-				genotype.totalCoverage++;
-
-				if (!fragmentSpan.isDuplicate())
-				{
-					genotype.uniqueCoverage++;
-				}
-			}
-		}
-
-		/*
-		 * // populate total and unique coverage values by taking average
-		 * int pileupIndex = pileup.getIndex(genotypeID.contig,
-		 * genotypeID.position + 1);
-		 * int deletedBases = genotypeID.ref.length;
-		 * for (int i = 0; i < deletedBases; i++, pileupIndex++)
-		 * {
-		 * genotype.totalCoverage += pileup.positions[pileupIndex]
-		 * .getCoverage();
-		 * genotype.uniqueCoverage +=
-		 * pileup.positionsWithoutDuplicates[pileupIndex]
-		 * .getCoverage();
-		 * }
-		 * 
-		 * genotype.totalCoverage = genotype.totalCoverage / deletedBases;
-		 * genotype.uniqueCoverage = genotype.uniqueCoverage / deletedBases;
-		 */
-
-		return genotype.toString();
-	}
-
-	private String processMultibaseDeletion(GenotypeID genotypeID,
-			String genotypeName)
-	{
-		Genotype genotype = new Genotype(genotypeName, genotypeID);
-
-		// find the fragments supporting genotype
-		Set<String> fragments = pileup.genotypes.get(genotypeID);
-
-		// record supporting fragments
-		if (fragments != null)
-		{
-			genotype.totalSupportingCoverage = fragments.size();
-			for (String fragment : fragments)
-			{
-				if (!pileup.fragmentSpans.get(fragment).isDuplicate())
-				{
-					genotype.uniqueSupportingCoverage++;
-				}
-			}
-		}
-
-		// record spanning fragments
-		for (FragmentSpan fragmentSpan : pileup.fragmentSpans.values())
-		{
-			if (fragmentSpan.spanningReads(genotypeID.contig,
-					genotypeID.position + 1,
-					genotypeID.position + genotypeID.alt.length - 1) > 0)
-			{
-				genotype.totalCoverage++;
-
-				if (!fragmentSpan.isDuplicate())
-				{
-					genotype.uniqueCoverage++;
-				}
-			}
-		}
-
-		/*
-		 * // populate total and unique coverage values by taking average
-		 * int pileupIndex = pileup.getIndex(genotypeID.contig,
-		 * genotypeID.position + 1);
-		 * int deletedBases = genotypeID.ref.length;
-		 * for (int i = 0; i < deletedBases; i++, pileupIndex++)
-		 * {
-		 * genotype.totalCoverage += pileup.positions[pileupIndex]
-		 * .getCoverage();
-		 * genotype.uniqueCoverage +=
-		 * pileup.positionsWithoutDuplicates[pileupIndex]
-		 * .getCoverage();
-		 * }
-		 * 
-		 * genotype.totalCoverage = genotype.totalCoverage / deletedBases;
-		 * genotype.uniqueCoverage = genotype.uniqueCoverage / deletedBases;
-		 */
-
-		return genotype.toString();
-	}
-
-	private String processInsertion(GenotypeID genotypeID, String genotypeName)
-	{
-		// find the special genotype
-		Genotype genotype = null; // pileup.genotypes.get(genotypeID);
-		if (genotype == null)
-		{
-			// this genotype was not recorded, create empty genotype
-			genotype = new Genotype(genotypeName, genotypeID);
-		}
-
-		// populate total and unique coverage values
-		// use the coverage at preceding genomic position as proxy
-		int pileupIndex = pileup.getIndex(genotypeID.contig,
-				genotypeID.position);
-		genotype.totalCoverage = pileup.positions[pileupIndex].getCoverage();
-		genotype.uniqueCoverage = pileup.positionsWithoutDuplicates[pileupIndex]
-				.getCoverage();
 
 		return genotype.toString();
 	}
@@ -1088,7 +948,7 @@ public class GenotypingProcessor implements PileupProcessor
 			{
 				return false;
 			}
-			
+
 			GenotypeIDWithMafLine other = (GenotypeIDWithMafLine) obj;
 
 			if (genotypeID == null)

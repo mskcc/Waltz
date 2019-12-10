@@ -76,7 +76,7 @@ public class RegionPileup
 	/**
 	 * map of fragment name to fragment span
 	 */
-	private Map<String, FragmentSpan> fragmentSpans;
+	private Map<String, Fragment> fragments;
 	private int pileupIndex;
 	/**
 	 * the first valid position in the pileup for the current read
@@ -86,7 +86,7 @@ public class RegionPileup
 	/**
 	 * Genotypes and fragments that have those genotypes.
 	 */
-	private Map<GenotypeID, List<String>> genotypes;
+	private Map<GenotypeID, Set<String>> genotypes;
 
 	public RegionPileup(IndexedFastaSequenceFile referenceFasta,
 			int maxIntervalLength, int insertMin, int insertMax,
@@ -106,8 +106,8 @@ public class RegionPileup
 			positionsWithoutDuplicates[i] = new PositionPileup();
 		}
 
-		genotypes = new HashMap<GenotypeID, List<String>>();
-		fragmentSpans = new HashMap<String, FragmentSpan>();
+		genotypes = new HashMap<GenotypeID, Set<String>>();
+		fragments = new HashMap<String, Fragment>();
 	}
 
 	/**
@@ -132,7 +132,7 @@ public class RegionPileup
 		}
 
 		genotypes.clear();
-		fragmentSpans.clear();
+		fragments.clear();
 	}
 
 	public void addRecord(SAMRecord record)
@@ -170,8 +170,9 @@ public class RegionPileup
 
 		// TODO HANDLE NEGATIVE STRAND!!!
 
-		recordAndAdjustSpan(record);
+		MappedRead mappedRead = addToFragment(record);
 
+		// currently not using it by making validPileupStart = 0.
 		// the part of current read that overlaps with this interval also
 		// completely overlaps with the paired read and has already been
 		// processed.
@@ -236,7 +237,7 @@ public class RegionPileup
 
 				if (matchMismatchRecord != null)
 				{
-					matchMismatchRecord.recordSubstitutions(fragmentName);
+					matchMismatchRecord.recordSubstitutions(mappedRead);
 				}
 			}
 			else if (operator.equals(CigarOperator.INSERTION))
@@ -268,7 +269,8 @@ public class RegionPileup
 							GenotypeEventType.INSERTION, interval.getContig(),
 							precedingGenomicPosition, ref, alt);
 					// add
-					addGenotype(genotypeID, fragmentName);
+					// addGenotype(genotypeID, fragmentName);
+					mappedRead.addGenotype(genotypeID);
 				}
 
 				// increment readIndex but not PileupIndex
@@ -296,7 +298,8 @@ public class RegionPileup
 							GenotypeEventType.DELETION, interval.getContig(),
 							precedingGenomicPosition, ref, alt);
 					// add
-					addGenotype(genotypeID, fragmentName);
+					// addGenotype(genotypeID, fragmentName);
+					mappedRead.addGenotype(genotypeID);
 				}
 
 				// add deletions to the pileup
@@ -305,14 +308,13 @@ public class RegionPileup
 					if (pileupIndex >= validPileupStart
 							&& pileupIndex <= lastValidPositionIndex)
 					{
-						positions[pileupIndex].addBase('D',
-								fragmentName, readPairMismatchPolicy);
+						positions[pileupIndex].addBase('D', fragmentName,
+								readPairMismatchPolicy);
 
 						if (!duplicate)
 						{
 							positionsWithoutDuplicates[pileupIndex].addBase('D',
-									fragmentName,
-									readPairMismatchPolicy);
+									fragmentName, readPairMismatchPolicy);
 						}
 					}
 
@@ -375,34 +377,36 @@ public class RegionPileup
 
 	private void recordAndAdjustSpanDummy(SAMRecord record)
 	{
-		FragmentSpan fragmentSpan = fragmentSpans.get(record.getReadName());
+		Fragment fragmentSpan = fragments.get(record.getReadName());
 		if (fragmentSpan == null)
 		{
-			fragmentSpan = new FragmentSpan(record.getDuplicateReadFlag());
-			fragmentSpans.put(record.getReadName(), fragmentSpan);
+			fragmentSpan = new Fragment(record.getDuplicateReadFlag());
+			fragments.put(record.getReadName(), fragmentSpan);
 		}
 
-		ContineousSpan recordSpan = fragmentSpan.addAndAdjust(record);
+		MappedRead recordSpan = fragmentSpan.add(record);
 
 		validPileupStart = 0;
 		pileupIndex = record.getAlignmentStart() - interval.getStart();
 	}
 
-	private void recordAndAdjustSpan(SAMRecord record)
+	private MappedRead addToFragment(SAMRecord record)
 	{
-		FragmentSpan fragmentSpan = fragmentSpans.get(record.getReadName());
-		if (fragmentSpan == null)
+		Fragment fragment = fragments.get(record.getReadName());
+		if (fragment == null)
 		{
-			fragmentSpan = new FragmentSpan(duplicate);
-			fragmentSpans.put(record.getReadName(), fragmentSpan);
+			fragment = new Fragment(duplicate);
+			fragments.put(record.getReadName(), fragment);
 		}
 
-		ContineousSpan recordSpan = fragmentSpan.addAndAdjust(record);
+		MappedRead mappedRead = fragment.add(record);
 
 		// don't remove the already processed part, we need to process it again
 		// and tally. Set proper pileupIndex
 		validPileupStart = 0;
 		pileupIndex = record.getAlignmentStart() - interval.getStart();
+
+		return mappedRead;
 
 		// // this code removes the already processed part properly
 		// // current record is fully contained in previous records
@@ -433,11 +437,11 @@ public class RegionPileup
 	 */
 	private void addGenotype(GenotypeID genotypeID, String fragmentName)
 	{
-		List<String> fragments = genotypes.get(genotypeID);
+		Set<String> fragments = genotypes.get(genotypeID);
 
 		if (fragments == null)
 		{
-			fragments = new ArrayList<String>();
+			fragments = new HashSet<String>();
 			genotypes.put(genotypeID, fragments);
 		}
 
@@ -561,63 +565,59 @@ public class RegionPileup
 		}
 
 		// finalize genotype counts
-		Map<GenotypeID, Set<String>> g = computeGenotypeCoutns();
+		computeGenotypeCounts();
 
 		RegionPileupView view = new RegionPileupView(referenceBases, interval,
 				lastValidPositionIndex, positions, positionsWithoutDuplicates,
-				g, fragmentSpans, insertMin, insertMax);
+				genotypes, fragments, insertMin, insertMax);
 
 		processor.setRegionPileupView(view);
 	}
 
 	/**
-	 * use fragmentSpans and genotypes to come up with the right counts for
-	 * genotypes and replace old genotypes map with the new one
-	 * 
+	 * compute genotype counts by bringing genotypes from each fragment and
+	 * putting them together
 	 * 
 	 * @return
 	 */
-	private Map<GenotypeID, Set<String>> computeGenotypeCoutns()
+	private void computeGenotypeCounts()
 	{
-		Map<GenotypeID, Set<String>> g = new HashMap<GenotypeID, Set<String>>();
+		genotypes.clear();
 
-		// for each genotype-fragment pair, find out the expected number of
-		// supporting reads and then check if that many reads actually support
-		// the genotype
-		for (GenotypeID genotypeID : genotypes.keySet())
+		for (String name : fragments.keySet())
 		{
-			Set<String> finalized = new HashSet<String>();
-			List<String> list = genotypes.get(genotypeID);
+			Fragment fragment = fragments.get(name);
 
-			// make fragment name->read frequency map
-			TObjectIntHashMap<String> freqs = new TObjectIntHashMap<String>(
-					list.size());
-			for (String name : list)
+			Set<GenotypeID> fragmentGenotypes = fragment
+					.getGenotypes(readPairMismatchPolicy);
+			for (GenotypeID genotypeID : fragmentGenotypes)
 			{
-				freqs.adjustOrPutValue(name, 1, 1);
-			}
-
-			// check if expected number of reads for the genotype+fragment pair
-			// matches the actual number
-			for (String name : freqs.keySet())
-			{
-				int expected = fragmentSpans.get(name).spanningReads(
-						genotypeID.contig, genotypeID.position,
-						genotypeID.endPosition);
-
-				if (readPairMismatchPolicy != 0 || expected == freqs.get(name))
+				Set<String> names = genotypes.get(genotypeID);
+				if (names == null)
 				{
-					finalized.add(name);
+					names = new HashSet<String>();
+					genotypes.put(genotypeID, names);
 				}
-			}
 
-			if (!finalized.isEmpty())
-			{
-				g.put(genotypeID, finalized);
+				names.add(name);
 			}
 		}
 
-		return g;
+		
+//		GenotypeID genotypeID = new GenotypeID(GenotypeEventType.INSERTION,
+//				"11", 108203632, new byte[] { 71 }, new byte[] { 71, 84 });
+//		Set<String> names = genotypes.get(genotypeID);
+//		if(names == null)
+//		{
+//			return;
+//		}
+//		
+//		for(String name : names)
+//		{
+//			System.out.println(name);
+//		}
+//		
+//		int a = 5;
 	}
 
 	private class MatchMismatchRecord
@@ -643,57 +643,80 @@ public class RegionPileup
 			readBases.add(readBase);
 		}
 
-		public void recordSubstitutions(String fragmentName)
+		public void recordSNVs(MappedRead mappedRead)
 		{
 			int size = refs.size();
 			for (int i = 0; i < size; i++)
 			{
 				byte ref = refs.get(i);
-				byte read = readBases.get(i);
+				byte readBase = readBases.get(i);
 
 				// add substitution
-				if (ref != read)
+				if (ref != readBase)
 				{
 					GenotypeID genotypeID = new GenotypeID(
 							GenotypeEventType.SNV, contig,
 							genomicStartPosition + i, new byte[] { ref },
-							new byte[] { read });
+							new byte[] { readBase });
 
-					addGenotype(genotypeID, fragmentName);
+					mappedRead.addGenotype(genotypeID);
 				}
 			}
 		}
 
-		public void recordMulitbaseSubstitutions(String fragmentName)
+		public void recordSubstitutions(MappedRead mappedRead)
 		{
-			int size = refs.size() - 1;
+			int size = refs.size();
 			int i = 0;
 			while (i < size)
 			{
-				// no processing needed for matches or single mismatches
-				if (refs.get(i) == readBases.get(i)
-						|| refs.get(i + 1) == readBases.get(i + 1))
+				// no processing needed for matches or N's
+				if (readBases.get(i) == 'N' || refs.get(i) == readBases.get(i))
 				{
 					i++;
 					continue;
 				}
 
+				// find the index of the next matching base
 				int nextMatchIndex = size;
-				for (int j = i + 2; j < size; j++)
+				int j = i + 1;
+				for (; j < size; j++)
 				{
-					if (refs.get(j) == readBases.get(j))
+					// break on match or N
+					if (readBases.get(j) == 'N'
+							|| refs.get(j) == readBases.get(j))
 					{
 						nextMatchIndex = j;
 						break;
 					}
 				}
 
-				GenotypeID genotypeID = new GenotypeID(GenotypeEventType.MNV,
-						contig, genomicStartPosition + i,
-						refs.toArray(i, nextMatchIndex - i),
-						readBases.toArray(i, nextMatchIndex - i));
+				// reached the end of record without finding a match
+				if (j == size)
+				{
+					nextMatchIndex = j;
+				}
 
-				addGenotype(genotypeID, fragmentName);
+				GenotypeID genotypeID = null;
+
+				// SNV
+				if (nextMatchIndex - i == 1)
+				{
+					genotypeID = new GenotypeID(GenotypeEventType.SNV, contig,
+							genomicStartPosition + i,
+							refs.toArray(i, nextMatchIndex - i),
+							readBases.toArray(i, nextMatchIndex - i));
+				}
+				else
+				{
+					// MNV
+					genotypeID = new GenotypeID(GenotypeEventType.MNV, contig,
+							genomicStartPosition + i,
+							refs.toArray(i, nextMatchIndex - i),
+							readBases.toArray(i, nextMatchIndex - i));
+				}
+
+				mappedRead.addGenotype(genotypeID);
 
 				i = nextMatchIndex;
 

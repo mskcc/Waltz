@@ -53,7 +53,7 @@ public class RegionPileupView
 	 * multi-base substitution not handled yet.
 	 */
 	public final Map<GenotypeID, Set<String>> genotypes;
-	public final Map<String, FragmentSpan> fragmentSpans;
+	public final Map<String, Fragment> fragmentSpans;
 	public final int insertMin;
 	public final int insertMax;
 
@@ -61,7 +61,7 @@ public class RegionPileupView
 			int lastValidPositionIndex, PositionPileup[] positions,
 			PositionPileup[] positionsWithoutDuplicates,
 			Map<GenotypeID, Set<String>> genotypes,
-			Map<String, FragmentSpan> fragmentSpans, int insertMin,
+			Map<String, Fragment> fragmentSpans, int insertMin,
 			int insertMax)
 	{
 		this.referenceBases = referenceBases;

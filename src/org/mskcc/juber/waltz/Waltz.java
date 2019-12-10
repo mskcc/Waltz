@@ -104,7 +104,7 @@ public class Waltz
 		else
 		{
 			System.out.println("Unsupported module: " + module);
-			System.exit(0);
+			System.exit(1);
 		}
 
 		// must not see args[] beyond this point

@@ -29,7 +29,7 @@ package org.mskcc.juber.waltz.pileup.processors;
 import java.io.IOException;
 
 import org.mskcc.juber.waltz.WaltzOutput;
-import org.mskcc.juber.waltz.pileup.FragmentSpan;
+import org.mskcc.juber.waltz.pileup.Fragment;
 import org.mskcc.juber.waltz.pileup.PositionPileup;
 import org.mskcc.juber.waltz.pileup.RegionPileupView;
 
@@ -119,7 +119,7 @@ public class PileupMetricsProcessor implements PileupProcessor
 
 		// count unique fragments
 		int uniqueFragments = 0;
-		for (FragmentSpan fragment : pileup.fragmentSpans.values())
+		for (Fragment fragment : pileup.fragmentSpans.values())
 		{
 			if (!fragment.isDuplicate())
 			{
